@@ -6,4 +6,7 @@ public interface EquipmentCommandService {
     Result<Long, ApplicationError> handle(CreateEquipmentCommand command);
     Result<Equipment, ApplicationError> handle(UpdateEquipmentCommand command);
     Result<Long, ApplicationError> handle(DeleteEquipmentCommand command);
+    Result<Equipment, ApplicationError> handle(ReserveEquipmentPeriodCommand command);
+    Result<Equipment, ApplicationError> handle(ChangeEquipmentOperationalStatusCommand command);
+    Result<Equipment, ApplicationError> handle(ReleaseEquipmentAvailabilityBlockCommand command);
 }
