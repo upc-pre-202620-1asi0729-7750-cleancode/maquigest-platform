@@ -6,10 +6,20 @@ import com.maquigest.platform.rentals.domain.model.commands.*;
 import com.maquigest.platform.rentals.domain.model.entities.*;
 import com.maquigest.platform.rentals.domain.model.valueobjects.RentalStatus;
 import com.maquigest.platform.rentals.domain.repositories.*;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RentalLifecycleCommandServiceImpl implements RentalLifecycleCommandService {
+    private static final ZoneId LIMA = ZoneId.of("America/Lima");
+    private static final long CLOCK_SKEW_SECONDS = 60;
+
+    private static void rejectFutureTimestamp(Instant value, String field) {
+        if(value.isAfter(Instant.now().plusSeconds(CLOCK_SKEW_SECONDS)))
+            throw RentalsException.invalid(field + " cannot be in the future");
+    }
     private final RentalRepository rentals;
     private final DeliveryRepository deliveries;
     private final EquipmentReturnRepository returns;
@@ -34,6 +44,10 @@ public class RentalLifecycleCommandServiceImpl implements RentalLifecycleCommand
         }
         if(rental.getStatus()!=RentalStatus.CONFIRMED)
             throw RentalsException.conflict("Only CONFIRMED rentals can be delivered");
+        rejectFutureTimestamp(command.deliveredAt(), "deliveredAt");
+        LocalDate deliveryDate = command.deliveredAt().atZone(LIMA).toLocalDate();
+        if(deliveryDate.isBefore(rental.getPeriod().startDate()) || deliveryDate.isAfter(rental.getPeriod().endDate()))
+            throw RentalsException.conflict("Delivery date must fall within the agreed rental period");
         equipment.markDelivered(rental.getEquipmentId(),rental.getRentalCompanyUserId(),rental.getAvailabilityBlockId());
         rental.deliver();
         var delivery=deliveries.save(new Delivery(null,rental.getId(),command.deliveredAt(),command.notes()));
@@ -61,6 +75,10 @@ public class RentalLifecycleCommandServiceImpl implements RentalLifecycleCommand
             .orElseThrow(()->RentalsException.conflict("A recorded delivery is required before return"));
         if(command.returnedAt().isBefore(delivery.deliveredAt()))
             throw RentalsException.invalid("Return timestamp cannot precede delivery");
+        rejectFutureTimestamp(command.returnedAt(), "returnedAt");
+        if(command.returnedAt().atZone(LIMA).toLocalDate().isBefore(rental.getPeriod().startDate()))
+            throw RentalsException.conflict("Return cannot occur before the rental period begins");
+        // Early returns after handover are valid; late returns are recorded for follow-up.
         equipment.completeReturn(rental.getEquipmentId(),rental.getRentalCompanyUserId(),
             rental.getAvailabilityBlockId(),command.maintenanceRequired());
         rental.complete();
