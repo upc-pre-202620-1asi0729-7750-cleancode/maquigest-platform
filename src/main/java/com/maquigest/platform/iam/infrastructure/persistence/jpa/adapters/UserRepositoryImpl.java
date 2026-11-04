@@ -8,9 +8,10 @@ import com.maquigest.platform.iam.infrastructure.persistence.jpa.repositories.Us
 import com.maquigest.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.stream.Collectors;
 
-/** Repository adapter that bridges the IAM domain port and JPA. */
+/** Repository adapter that bridges the IAM domain port and Spring Data JPA. */
 @Repository
 public class UserRepositoryImpl implements UserRepository {
     private final UserPersistenceRepository userPersistenceRepository;
@@ -26,9 +27,15 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByEmail(String email) {
+        return userPersistenceRepository.findByEmailIgnoreCase(email)
+                .map(UserPersistenceAssembler::toDomainFromPersistence);
+    }
+
+    @Override
     public User save(User user) {
         var entity = UserPersistenceAssembler.toPersistenceFromDomain(user);
-        // Associate already-persisted lookup roles; never INSERT role duplicates from sign-up.
+        // Associate existing roles; never insert duplicate role lookup entities.
         entity.setRoles(entity.getRoles().stream()
                 .map(role -> rolePersistenceRepository.findByName(role.getName())
                         .orElseThrow(() -> new IllegalArgumentException("Unknown role: " + role.getName())))
