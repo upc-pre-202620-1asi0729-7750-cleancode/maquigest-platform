@@ -14,7 +14,7 @@ public final class EquipmentPersistenceAssembler {
             entity.getDescription(),entity.getCategoryId(),entity.getLocation(),
             new RentalRate(entity.getDailyRate(),entity.getWeeklyRate()),entity.getStatus(),
             entity.getAvailabilityBlocks().stream().map(b -> new AvailabilityBlock(
-                b.getId(),b.getStartDate(),b.getEndDate())).toList());
+                b.getId(),b.getStartDate(),b.getEndDate(),b.getReleasedAt())).toList());
     }
     public static EquipmentPersistenceEntity toNewPersistenceFromDomain(Equipment equipment) {
         var entity = new EquipmentPersistenceEntity();
@@ -35,9 +35,8 @@ public final class EquipmentPersistenceAssembler {
         Map<Long,AvailabilityBlockPersistenceEntity> currentById = entity.getAvailabilityBlocks().stream()
             .filter(b -> b.getId()!=null).collect(Collectors.toMap(
                 AvailabilityBlockPersistenceEntity::getId,Function.identity()));
-        var desired = equipment.getAvailabilityBlocks();
-        entity.getAvailabilityBlocks().removeIf(existing -> desired.stream()
-            .noneMatch(block -> block.getId()!=null && block.getId().equals(existing.getId())));
+        // Never orphan-delete historical blocks. Release is represented by releasedAt.
+        var desired = equipment.getAllAvailabilityBlocks();
         for (var domainBlock : desired) {
             var existing = domainBlock.getId()==null ? null : currentById.get(domainBlock.getId());
             if (existing==null) {
@@ -46,6 +45,7 @@ public final class EquipmentPersistenceAssembler {
             }
             existing.setStartDate(domainBlock.getStartDate());
             existing.setEndDate(domainBlock.getEndDate());
+            existing.setReleasedAt(domainBlock.getReleasedAt());
         }
     }
 }
