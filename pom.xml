@@ -39,11 +39,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
-        <!--<dependency>
+        <!-- Full Spring Security filter chain and password authentication. -->
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>-->
-        <!-- BCrypt password hashing only. Full security starter is enabled with JWT later. -->
+        </dependency>
+        <!-- Retained from IAM Block 2; also provided transitively by the security starter. -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
