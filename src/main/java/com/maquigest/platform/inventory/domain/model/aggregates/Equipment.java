@@ -6,6 +6,7 @@ import com.maquigest.platform.inventory.domain.model.entities.AvailabilityBlock;
 import com.maquigest.platform.inventory.domain.model.valueobjects.EquipmentStatus;
 import com.maquigest.platform.inventory.domain.model.valueobjects.RentalRate;
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,11 +78,11 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
     public boolean isAvailableFor(LocalDate startDate, LocalDate endDate) {
         validatePeriod(startDate, endDate);
         return status == EquipmentStatus.AVAILABLE &&
-            availabilityBlocks.stream().noneMatch(block -> block.overlaps(startDate, endDate));
+            availabilityBlocks.stream().noneMatch(block -> block.isActive() && block.overlaps(startDate, endDate));
     }
     public void addAvailabilityBlock(AvailabilityBlock block) {
         if (block == null) throw new IllegalArgumentException("block is required");
-        if (availabilityBlocks.stream().anyMatch(existing -> existing.overlaps(block.getStartDate(), block.getEndDate()))) {
+        if (block.isActive() && availabilityBlocks.stream().anyMatch(existing -> existing.isActive() && existing.overlaps(block.getStartDate(), block.getEndDate()))) {
             throw new IllegalArgumentException("Equipment availability blocks cannot overlap");
         }
         availabilityBlocks.add(block);
@@ -94,8 +95,34 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
     public boolean canBeDeleted() {
         return status == EquipmentStatus.AVAILABLE && availabilityBlocks.isEmpty();
     }
+    public void reservePeriod(LocalDate from, LocalDate to) {
+        if (!isAvailableFor(from, to)) {
+            throw new IllegalStateException("Equipment is unavailable or the requested period overlaps another reservation");
+        }
+        addAvailabilityBlock(new AvailabilityBlock(null, from, to));
+    }
+    /** Release only an individual reservation, under the aggregate's exclusive DB lock. */
+    public void releaseAvailabilityBlock(Long blockId, Instant releasedAt) {
+        if (blockId == null || blockId <= 0) throw new IllegalArgumentException("blockId must be positive");
+        if (status == EquipmentStatus.RENTED) {
+            throw new IllegalStateException("Cannot release reservations while equipment is rented");
+        }
+        var block = availabilityBlocks.stream()
+            .filter(item -> blockId.equals(item.getId()))
+            .findFirst().orElseThrow(() -> new java.util.NoSuchElementException("Reservation block not found"));
+        block.release(releasedAt);
+    }
+
     public void changeOperationalStatus(EquipmentStatus nextStatus) {
         if (nextStatus == null) throw new IllegalArgumentException("status is required");
+        if (status == nextStatus) return; // idempotent retry
+        boolean allowed = switch (status) {
+            case AVAILABLE -> nextStatus == EquipmentStatus.RENTED && !availabilityBlocks.isEmpty()
+                || nextStatus == EquipmentStatus.MAINTENANCE;
+            case RENTED -> nextStatus == EquipmentStatus.AVAILABLE || nextStatus == EquipmentStatus.MAINTENANCE;
+            case MAINTENANCE -> nextStatus == EquipmentStatus.AVAILABLE;
+        };
+        if (!allowed) throw new IllegalStateException("Equipment operational status transition is not allowed");
         this.status = nextStatus;
     }
     public Long getId() { return id; }
@@ -107,5 +134,10 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
     public String getLocation() { return location; }
     public RentalRate getRentalRate() { return rentalRate; }
     public EquipmentStatus getStatus() { return status; }
-    public List<AvailabilityBlock> getAvailabilityBlocks() { return List.copyOf(availabilityBlocks); }
+    /** Public availability is only affected by active reservations. */
+    public List<AvailabilityBlock> getAvailabilityBlocks() {
+        return availabilityBlocks.stream().filter(AvailabilityBlock::isActive).toList();
+    }
+    /** Infrastructure uses this list to persist the released reservations as history. */
+    public List<AvailabilityBlock> getAllAvailabilityBlocks() { return List.copyOf(availabilityBlocks); }
 }

@@ -30,4 +30,18 @@ class InventoryOwnershipPolicyTests {
         when(equipment.findById(99L)).thenReturn(Optional.of(asset));
         assertFalse(policy.canManage(auth,99L));
     }
+    @Test void constructionCompanyCannotOperateRentalCompanyEquipment() {
+        var users=mock(UserRepository.class);
+        var equipment=mock(EquipmentRepository.class);
+        var constructionUser=User.reconstitute(42L,"Construction","User","constructor@example.com",
+            "hash","Construcciones SAC",Set.of(new Role(Roles.ROLE_CONSTRUCTION_COMPANY)),null);
+        when(users.findByEmail("constructor@example.com")).thenReturn(Optional.of(constructionUser));
+        var rentalAsset=new Equipment(new CreateEquipmentCommand(1L,"EXC-01","Rental asset","Desc",
+            1L,"Lima",BigDecimal.ONE,BigDecimal.TEN));
+        when(equipment.findById(9L)).thenReturn(Optional.of(rentalAsset));
+        var policy=new InventoryOwnershipPolicy(users,equipment);
+        var authentication=new UsernamePasswordAuthenticationToken("constructor@example.com",null,List.of());
+        assertFalse(policy.canManage(authentication,9L));
+        assertFalse(policy.canCreate(authentication,42L));
+    }
 }

@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import java.time.LocalDate;
+import java.time.Instant;
 /** Availability block belongs to exactly one Equipment aggregate. */
 @Entity
 @Table(name="equipment_availability_blocks")
@@ -15,4 +16,6 @@ public class AvailabilityBlockPersistenceEntity extends AuditableAbstractPersist
     private EquipmentPersistenceEntity equipment;
     @Column(name="start_date",nullable=false) private LocalDate startDate;
     @Column(name="end_date",nullable=false) private LocalDate endDate;
+    /** Nullable for existing rows: null means active; non-null preserves release history. */
+    @Column(name="released_at") private Instant releasedAt;
 }
