@@ -1,12 +1,12 @@
 package com.maquigest.platform.iam.infrastructure.hashing.bcrypt.services;
 
-import com.maquigest.platform.iam.application.internal.outboundservices.hashing.HashingService;
+import com.maquigest.platform.iam.infrastructure.hashing.bcrypt.BCryptHashingService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-/** BCrypt implementation of the IAM hashing outbound port. */
+/** One BCrypt implementation serves both the application port and Spring Security. */
 @Service
-public class HashingServiceImpl implements HashingService {
+public class HashingServiceImpl implements BCryptHashingService {
     private final BCryptPasswordEncoder passwordEncoder;
 
     public HashingServiceImpl() {

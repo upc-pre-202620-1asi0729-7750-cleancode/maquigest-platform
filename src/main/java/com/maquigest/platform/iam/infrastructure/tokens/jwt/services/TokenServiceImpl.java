@@ -1,13 +1,16 @@
 package com.maquigest.platform.iam.infrastructure.tokens.jwt.services;
 
-import com.maquigest.platform.iam.application.internal.outboundservices.tokens.TokenService;
+import com.maquigest.platform.iam.infrastructure.tokens.jwt.BearerTokenService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -16,10 +19,13 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.function.Function;
 
-/** JWT adapter: issue signed and time-limited tokens, validate signatures and expiration. */
+/** JWT adapter for generation, verification and HTTP bearer token extraction. */
 @Service
 @Slf4j
-public class TokenServiceImpl implements TokenService {
+public class TokenServiceImpl implements BearerTokenService {
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private final SecretKey signingKey;
     private final int expirationDays;
 
@@ -34,6 +40,14 @@ public class TokenServiceImpl implements TokenService {
         }
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationDays = expirationDays;
+    }
+
+    @Override
+    public String generateToken(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalArgumentException("A valid authentication is required");
+        }
+        return generateToken(authentication.getName());
     }
 
     @Override
@@ -63,9 +77,19 @@ public class TokenServiceImpl implements TokenService {
             var claims = extractAllClaims(token);
             return claims.getSubject() != null && !claims.getSubject().isBlank();
         } catch (JwtException | IllegalArgumentException ex) {
-            log.warn("JWT validation failed: {}", ex.getClass().getSimpleName());
+            log.warn("JWT verification failed: {}", ex.getClass().getSimpleName());
             return false;
         }
+    }
+
+    @Override
+    public String getBearerTokenFrom(HttpServletRequest request) {
+        var header = request.getHeader(AUTHORIZATION_HEADER);
+        if (!StringUtils.hasText(header) || !header.startsWith(BEARER_PREFIX)) {
+            return null;
+        }
+        var token = header.substring(BEARER_PREFIX.length()).trim();
+        return StringUtils.hasText(token) ? token : null;
     }
 
     private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
@@ -73,7 +97,6 @@ public class TokenServiceImpl implements TokenService {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parser().verifyWith(signingKey).build()
-                .parseSignedClaims(token).getPayload();
+        return Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token).getPayload();
     }
 }
