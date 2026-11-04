@@ -19,6 +19,9 @@ public class EquipmentRepositoryImpl implements EquipmentRepository {
     @Override public Optional<Equipment> findById(Long id) {
         return persistence.findById(id).map(EquipmentPersistenceAssembler::toDomainFromPersistence);
     }
+    @Override public Optional<Equipment> findByIdForUpdate(Long id) {
+        return persistence.findByIdForUpdate(id).map(EquipmentPersistenceAssembler::toDomainFromPersistence);
+    }
     @Override public List<Equipment> findAll() {
         return persistence.findAll().stream().sorted(Comparator.comparing(EquipmentPersistenceEntity::getId))
             .map(EquipmentPersistenceAssembler::toDomainFromPersistence).toList();

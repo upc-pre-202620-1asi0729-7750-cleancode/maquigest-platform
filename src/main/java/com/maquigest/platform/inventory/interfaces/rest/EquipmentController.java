@@ -4,6 +4,8 @@ import com.maquigest.platform.inventory.application.commandservices.EquipmentCom
 import com.maquigest.platform.inventory.application.queryservices.EquipmentQueryService;
 import com.maquigest.platform.inventory.domain.model.aggregates.Equipment;
 import com.maquigest.platform.inventory.domain.model.commands.DeleteEquipmentCommand;
+import com.maquigest.platform.inventory.domain.model.commands.ReserveEquipmentPeriodCommand;
+import com.maquigest.platform.inventory.domain.model.commands.ChangeEquipmentOperationalStatusCommand;
 import com.maquigest.platform.inventory.domain.model.queries.*;
 import com.maquigest.platform.inventory.infrastructure.acl.iam.InventoryOwnershipPolicy;
 import com.maquigest.platform.inventory.interfaces.rest.resources.*;
@@ -81,6 +83,28 @@ public class EquipmentController {
         if (!ownership.canManage(authentication,id)) return forbidden();
         return ResponseEntityAssembler.toResponseEntityFromResult(
             commands.handle(UpdateEquipmentCommandFromResourceAssembler.toCommandFromResource(id,resource)),
+            EquipmentResourceFromEntityAssembler::toResourceFromEntity,HttpStatus.OK);
+    }
+
+    @PostMapping(value="/{id}/availability-blocks",consumes=APPLICATION_JSON_VALUE)
+    @Operation(summary="Reserve an inclusive equipment calendar period atomically")
+    @ApiResponse(responseCode="409",description="Equipment unavailable or date range overlaps")
+    public ResponseEntity<?> reservePeriod(@PathVariable Long id,
+        @Valid @RequestBody ReserveEquipmentPeriodResource resource, Authentication authentication) {
+        if (!ownership.canManage(authentication,id)) return forbidden();
+        return ResponseEntityAssembler.toResponseEntityFromResult(
+            commands.handle(new ReserveEquipmentPeriodCommand(id,resource.startDate(),resource.endDate())),
+            EquipmentResourceFromEntityAssembler::toResourceFromEntity,HttpStatus.CREATED);
+    }
+
+    @PatchMapping(value="/{id}/operational-status",consumes=APPLICATION_JSON_VALUE)
+    @Operation(summary="Change equipment operational status using aggregate transition rules")
+    @ApiResponse(responseCode="409",description="Operational transition not allowed")
+    public ResponseEntity<?> changeStatus(@PathVariable Long id,
+        @Valid @RequestBody ChangeEquipmentOperationalStatusResource resource, Authentication authentication) {
+        if (!ownership.canManage(authentication,id)) return forbidden();
+        return ResponseEntityAssembler.toResponseEntityFromResult(
+            commands.handle(new ChangeEquipmentOperationalStatusCommand(id,resource.status())),
             EquipmentResourceFromEntityAssembler::toResourceFromEntity,HttpStatus.OK);
     }
 
