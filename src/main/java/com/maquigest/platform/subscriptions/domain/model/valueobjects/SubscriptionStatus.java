@@ -1,0 +1,2 @@
+package com.maquigest.platform.subscriptions.domain.model.valueobjects;
+public enum SubscriptionStatus { ACTIVE, CANCELLED, EXPIRED }
