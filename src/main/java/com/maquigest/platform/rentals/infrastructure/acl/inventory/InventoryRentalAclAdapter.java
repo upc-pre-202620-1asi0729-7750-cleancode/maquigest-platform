@@ -1,61 +1,56 @@
 package com.maquigest.platform.rentals.infrastructure.acl.inventory;
-import com.maquigest.platform.rentals.application.ports.RentalEquipmentPort;
+
+import com.maquigest.platform.inventory.interfaces.acl.InventoryRentalFacade;
+import com.maquigest.platform.inventory.interfaces.acl.InventoryRentalFailure;
 import com.maquigest.platform.rentals.application.exceptions.RentalsException;
+import com.maquigest.platform.rentals.application.ports.RentalEquipmentPort;
 import com.maquigest.platform.rentals.domain.model.valueobjects.RentalPeriod;
-import com.maquigest.platform.inventory.domain.repositories.EquipmentRepository;
-import com.maquigest.platform.inventory.domain.model.aggregates.Equipment;
-import com.maquigest.platform.inventory.domain.model.entities.AvailabilityBlock;
-import com.maquigest.platform.inventory.domain.model.valueobjects.EquipmentStatus;
-import java.time.Instant;
 import org.springframework.stereotype.Component;
-/** Inventory is only accessed via this ACL; Rentals domain never imports Inventory types. */
+
+/** Translate Inventory's published language into Rentals' application port. */
 @Component
 public class InventoryRentalAclAdapter implements RentalEquipmentPort {
-    private final EquipmentRepository inventory;
-    public InventoryRentalAclAdapter(EquipmentRepository inventory){this.inventory=inventory;}
-    private Equipment locked(Long id, Long owner) {
-        if(id==null || id<=0 || owner==null || owner<=0) throw RentalsException.invalid("Invalid equipment or owner id");
-        var equipment=inventory.findByIdForUpdate(id).orElseThrow(()->RentalsException.notFound("Equipment"));
-        if(!equipment.getUserId().equals(owner)) throw RentalsException.forbidden();
-        return equipment;
+    private final InventoryRentalFacade inventory;
+
+    public InventoryRentalAclAdapter(InventoryRentalFacade inventory) {
+        this.inventory = inventory;
     }
-    @Override public EquipmentFacts inspect(Long equipmentId,RentalPeriod period) {
-        if(equipmentId==null || equipmentId<=0 || period==null) throw RentalsException.invalid("Invalid equipment or period");
-        var equipment=inventory.findById(equipmentId).orElseThrow(()->RentalsException.notFound("Equipment"));
-        return new EquipmentFacts(equipment.getId(),equipment.getUserId(),
-            equipment.isAvailableFor(period.startDate(),period.endDate()));
+
+    private static RentalsException translate(InventoryRentalFailure error) {
+        return switch (error.kind()) {
+            case INVALID -> RentalsException.invalid(error.getMessage());
+            case NOT_FOUND -> RentalsException.notFound("Equipment");
+            case FORBIDDEN -> RentalsException.forbidden();
+            case CONFLICT -> RentalsException.conflict(error.getMessage());
+        };
     }
-    @Override public Long reserve(Long equipmentId,Long ownerUserId,RentalPeriod period) {
-        if(period==null) throw RentalsException.invalid("Rental period is required");
-        var equipment=locked(equipmentId,ownerUserId);
-        try { equipment.reservePeriod(period.startDate(),period.endDate()); }
-        catch (IllegalStateException ex) { throw RentalsException.conflict(ex.getMessage()); }
-        var saved=inventory.save(equipment);
-        return saved.getAllAvailabilityBlocks().stream().filter(AvailabilityBlock::isActive)
-            .filter(b->b.getStartDate().equals(period.startDate()) && b.getEndDate().equals(period.endDate()))
-            .map(AvailabilityBlock::getId).filter(id->id!=null && id>0).findFirst()
-            .orElseThrow(()->new IllegalStateException("The persisted availability block has no id"));
-    }
-    @Override public void markDelivered(Long equipmentId,Long ownerUserId,Long blockId) {
-        var equipment=locked(equipmentId,ownerUserId);
-        boolean reserved=equipment.getAvailabilityBlocks().stream().anyMatch(b->blockId.equals(b.getId()));
-        if(!reserved) throw RentalsException.conflict("This rental's reservation is not active");
-        if(equipment.getStatus()!=EquipmentStatus.AVAILABLE)
-            throw RentalsException.conflict("Equipment is not in AVAILABLE status");
-        try { equipment.changeOperationalStatus(EquipmentStatus.RENTED); }
-        catch(IllegalStateException ex){throw RentalsException.conflict(ex.getMessage());}
-        inventory.save(equipment);
-    }
-    @Override public void completeReturn(Long equipmentId,Long ownerUserId,Long blockId,boolean maintenanceRequired) {
-        var equipment=locked(equipmentId,ownerUserId);
-        if(equipment.getStatus()!=EquipmentStatus.RENTED)
-            throw RentalsException.conflict("Only RENTED equipment can be returned");
-        boolean reserved=equipment.getAvailabilityBlocks().stream().anyMatch(b->blockId.equals(b.getId()));
-        if(!reserved) throw RentalsException.conflict("This rental's reservation is not active");
+
+    @Override
+    public EquipmentFacts inspect(Long equipmentId, RentalPeriod period) {
+        if (equipmentId == null || equipmentId <= 0 || period == null)
+            throw RentalsException.invalid("Invalid equipment or period");
         try {
-            equipment.changeOperationalStatus(maintenanceRequired?EquipmentStatus.MAINTENANCE:EquipmentStatus.AVAILABLE);
-            equipment.releaseAvailabilityBlock(blockId,Instant.now());
-        } catch(IllegalStateException ex){throw RentalsException.conflict(ex.getMessage());}
-        inventory.save(equipment);
+            var snapshot = inventory.inspect(equipmentId, period.startDate(), period.endDate());
+            return new EquipmentFacts(snapshot.id(), snapshot.ownerUserId(), snapshot.availableForPeriod());
+        } catch (InventoryRentalFailure error) { throw translate(error); }
+    }
+
+    @Override
+    public Long reserve(Long equipmentId, Long ownerUserId, RentalPeriod period) {
+        if (period == null) throw RentalsException.invalid("Rental period is required");
+        try { return inventory.reserve(equipmentId, ownerUserId, period.startDate(), period.endDate()); }
+        catch (InventoryRentalFailure error) { throw translate(error); }
+    }
+
+    @Override
+    public void markDelivered(Long equipmentId, Long ownerUserId, Long blockId) {
+        try { inventory.markDelivered(equipmentId, ownerUserId, blockId); }
+        catch (InventoryRentalFailure error) { throw translate(error); }
+    }
+
+    @Override
+    public void completeReturn(Long equipmentId, Long ownerUserId, Long blockId, boolean maintenanceRequired) {
+        try { inventory.completeReturn(equipmentId, ownerUserId, blockId, maintenanceRequired); }
+        catch (InventoryRentalFailure error) { throw translate(error); }
     }
 }
