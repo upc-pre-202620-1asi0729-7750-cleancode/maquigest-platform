@@ -1,32 +1,44 @@
 package com.maquigest.platform.subscriptions.infrastructure.acl.iam;
-import com.maquigest.platform.iam.domain.model.aggregates.User;
-import com.maquigest.platform.iam.domain.model.entities.Role;
-import com.maquigest.platform.iam.domain.model.valueobjects.Roles;
-import com.maquigest.platform.iam.domain.model.valueobjects.UserStatus;
-import com.maquigest.platform.iam.domain.repositories.UserRepository;
+
+import com.maquigest.platform.iam.interfaces.acl.IamActorFacade;
+import com.maquigest.platform.iam.interfaces.acl.IamActorFacade.ActorSnapshot;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+
+import java.util.List;
 import java.util.Optional;
-import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+
 class SubscriptionOwnershipPolicyTests {
-    @Test void rejectsUnauthenticatedAndUnrelatedSubscriber() {
-        var users=mock(UserRepository.class);
-        var policy=new SubscriptionOwnershipPolicy(users);
-        assertFalse(policy.canManage(null,1L));
-        var auth=new UsernamePasswordAuthenticationToken("carlos.prueba@example.com", "", Set.of());
-        assertFalse(policy.canManage(auth,2L));
-        verify(users).findByEmail("carlos.prueba@example.com");
+    private static UsernamePasswordAuthenticationToken auth(String email) {
+        return new UsernamePasswordAuthenticationToken(email, null, List.of());
     }
+
+    @Test void rejectsUnauthenticatedAndUnrelatedSubscriber() {
+        var iam = mock(IamActorFacade.class);
+        var policy = new SubscriptionOwnershipPolicy(iam);
+        assertFalse(policy.canManage(null, 1L));
+        assertFalse(policy.canManage(auth("carlos.prueba@example.com"), 2L));
+        verify(iam).findActiveByEmail("carlos.prueba@example.com");
+    }
+
     @Test void acceptsOnlyActiveOwnerWithRentalRole() {
-        var users=mock(UserRepository.class);
-        var policy=new SubscriptionOwnershipPolicy(users);
-        var role=new Role(Roles.ROLE_RENTAL_COMPANY);
-        var user=User.reconstitute(1L,"Carlos","QA","carlos.prueba@example.com","abc","QA Rental",Set.of(role),UserStatus.ACTIVE);
-        when(users.findByEmail("carlos.prueba@example.com")).thenReturn(Optional.of(user));
-        var auth=new UsernamePasswordAuthenticationToken("carlos.prueba@example.com","",Set.of());
-        assertTrue(policy.canManage(auth,1L));
-        assertFalse(policy.canManage(auth,2L));
+        var iam = mock(IamActorFacade.class);
+        when(iam.findActiveByEmail("carlos.prueba@example.com"))
+            .thenReturn(Optional.of(new ActorSnapshot(1L, true, false, false)));
+        var policy = new SubscriptionOwnershipPolicy(iam);
+        assertTrue(policy.canManage(auth("carlos.prueba@example.com"), 1L));
+        assertFalse(policy.canManage(auth("carlos.prueba@example.com"), 2L));
+    }
+
+    @Test void administratorMayManageOwnSubscriptionButNotOthers() {
+        var iam = mock(IamActorFacade.class);
+        when(iam.findActiveByEmail("admin@example.com"))
+            .thenReturn(Optional.of(new ActorSnapshot(6L, false, false, true)));
+        var policy = new SubscriptionOwnershipPolicy(iam);
+        assertTrue(policy.canManage(auth("admin@example.com"), 6L));
+        assertFalse(policy.canManage(auth("admin@example.com"), 7L));
     }
 }
