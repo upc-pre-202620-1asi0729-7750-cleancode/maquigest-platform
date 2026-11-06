@@ -9,7 +9,7 @@ import java.util.Objects;
 public final class UserSubscription extends AbstractDomainAggregateRoot<UserSubscription> {
     private final Long id;
     private final Long userId;
-    private final Long planId;
+    private Long planId;
     private final com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionPeriod period;
     private SubscriptionStatus status;
     private final boolean autoRenew;
@@ -36,6 +36,17 @@ public final class UserSubscription extends AbstractDomainAggregateRoot<UserSubs
     public boolean occupiesActivePeriodAt(Instant at) {
         return status == SubscriptionStatus.ACTIVE && period.endDate().isAfter(at);
     }
+    /** Change entitlement immediately, without altering the paid period or subscription identity. */
+    public void changePlan(Long newPlanId) {
+        if (!isActiveAt(Instant.now()))
+            throw new IllegalStateException("Only a currently ACTIVE subscription can change plan");
+        if (newPlanId == null || newPlanId <= 0)
+            throw new IllegalArgumentException("The new plan id must be positive");
+        if (planId.equals(newPlanId))
+            throw new IllegalStateException("The selected plan is already active");
+        planId = newPlanId;
+    }
+
     public void cancel() {
         if (status != SubscriptionStatus.ACTIVE)
             throw new IllegalStateException("Only an ACTIVE subscription can be cancelled");
