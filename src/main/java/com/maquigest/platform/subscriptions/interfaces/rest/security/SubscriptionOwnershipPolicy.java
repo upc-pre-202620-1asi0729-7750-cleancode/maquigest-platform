@@ -1,4 +1,4 @@
-package com.maquigest.platform.subscriptions.infrastructure.acl.iam;
+package com.maquigest.platform.subscriptions.interfaces.rest.security;
 
 import com.maquigest.platform.iam.interfaces.acl.IamActorFacade;
 import org.springframework.security.core.Authentication;

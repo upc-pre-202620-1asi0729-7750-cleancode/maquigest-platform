@@ -1,4 +1,4 @@
-package com.maquigest.platform.rentals.infrastructure.acl.iam;
+package com.maquigest.platform.rentals.interfaces.rest.security;
 
 import com.maquigest.platform.iam.interfaces.acl.IamActorFacade;
 import org.springframework.security.core.Authentication;

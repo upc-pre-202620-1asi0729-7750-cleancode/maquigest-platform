@@ -3,7 +3,7 @@ import com.maquigest.platform.profiles.application.commandservices.CompanyProfil
 import com.maquigest.platform.profiles.application.queryservices.CompanyProfileQueryService;
 import com.maquigest.platform.profiles.domain.model.aggregates.CompanyProfile;
 import com.maquigest.platform.profiles.domain.model.queries.*;
-import com.maquigest.platform.profiles.infrastructure.acl.iam.ProfileOwnershipPolicy;
+import com.maquigest.platform.profiles.interfaces.rest.security.ProfileOwnershipPolicy;
 import com.maquigest.platform.profiles.interfaces.rest.resources.*;
 import com.maquigest.platform.profiles.interfaces.rest.transform.*;
 import com.maquigest.platform.shared.application.result.*;
