@@ -10,6 +10,7 @@ import com.maquigest.platform.rentals.interfaces.rest.security.RentalActorPolicy
 import com.maquigest.platform.rentals.interfaces.rest.resources.RentalRequestResource;
 import com.maquigest.platform.rentals.interfaces.rest.resources.RescheduleRentalRequestResource;
 import com.maquigest.platform.rentals.interfaces.rest.transform.RentalResourceAssembler;
+import com.maquigest.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -64,8 +65,8 @@ public class RentalRequestController {
             throw RentalsException.forbidden();
         if (body.status() != null && body.status() != RentalRequestStatus.PENDING)
             throw RentalsException.invalid("New requests must be PENDING");
-        var created = commands.handle(new CreateRentalRequestCommand(body.equipmentId(), actor.userId(),
-            body.rentalCompanyUserId(), RentalResourceAssembler.parsePeriod(body.startDate(), body.endDate())));
+        var created = ResponseEntityAssembler.valueOrThrow(commands.handle(new CreateRentalRequestCommand(body.equipmentId(), actor.userId(),
+            body.rentalCompanyUserId(), RentalResourceAssembler.parsePeriod(body.startDate(), body.endDate()))), RentalsException::fromApplicationError);
         return ResponseEntity.status(HttpStatus.CREATED).body(RentalResourceAssembler.from(created));
     }
 
@@ -79,7 +80,7 @@ public class RentalRequestController {
         if (body == null) throw RentalsException.invalid("New rental dates are required");
         var newPeriod = RentalResourceAssembler.parsePeriod(body.startDate(), body.endDate());
         return RentalResourceAssembler.from(
-            commands.handle(new RescheduleRentalRequestCommand(id, actor.userId(), newPeriod)));
+            ResponseEntityAssembler.valueOrThrow(commands.handle(new RescheduleRentalRequestCommand(id, actor.userId(), newPeriod)), RentalsException::fromApplicationError));
     }
 
     @PutMapping(value="/{id}", consumes=APPLICATION_JSON_VALUE)
@@ -96,6 +97,6 @@ public class RentalRequestController {
             || !Objects.equals(body.rentalCompanyUserId(), original.getRentalCompanyUserId())
             || !RentalResourceAssembler.parsePeriod(body.startDate(), body.endDate()).equals(original.getPeriod()))
             throw RentalsException.invalid("Request participants, equipment and dates cannot be edited");
-        return RentalResourceAssembler.from(commands.handle(new ResolveRentalRequestCommand(id, actor.userId(), body.status())));
+        return RentalResourceAssembler.from(ResponseEntityAssembler.valueOrThrow(commands.handle(new ResolveRentalRequestCommand(id, actor.userId(), body.status())), RentalsException::fromApplicationError));
     }
 }

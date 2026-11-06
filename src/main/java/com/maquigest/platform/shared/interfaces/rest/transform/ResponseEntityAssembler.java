@@ -18,6 +18,21 @@ public final class ResponseEntityAssembler {
     }
 
     /**
+     * Read a command Result at the REST boundary without changing an established
+     * bounded-context HTTP error contract (status, localized detail, code).
+     * The transactional executor has already committed or rolled back before this call.
+     */
+    public static <T> T valueOrThrow(
+            Result<T, ApplicationError> result,
+            Function<ApplicationError, ? extends RuntimeException> toHttpException) {
+        return switch (result) {
+            case Result.Success<T, ApplicationError> success -> success.value();
+            case Result.Failure<T, ApplicationError> failure -> throw toHttpException.apply(failure.error());
+        };
+    }
+
+
+    /**
      * Converts a Result into an HTTP response using the provided success resource assembler.
      * Failure responses are delegated to ProblemDetailFromApplicationErrorAssembler.
      *
