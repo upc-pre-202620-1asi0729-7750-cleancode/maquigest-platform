@@ -5,7 +5,7 @@ import com.maquigest.platform.maintenance.application.exceptions.MaintenanceExce
 import com.maquigest.platform.maintenance.domain.model.commands.*;
 import com.maquigest.platform.maintenance.domain.model.queries.*;
 import com.maquigest.platform.maintenance.domain.model.valueobjects.MaintenanceStatus;
-import com.maquigest.platform.maintenance.infrastructure.acl.iam.MaintenanceActorPolicy;
+import com.maquigest.platform.maintenance.interfaces.rest.security.MaintenanceActorPolicy;
 import com.maquigest.platform.maintenance.interfaces.rest.resources.*;
 import com.maquigest.platform.maintenance.interfaces.rest.transform.MaintenanceResourceAssembler;
 import io.swagger.v3.oas.annotations.Operation;

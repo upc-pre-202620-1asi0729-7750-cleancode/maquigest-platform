@@ -1,4 +1,4 @@
-package com.maquigest.platform.inventory.infrastructure.acl.iam;
+package com.maquigest.platform.inventory.interfaces.rest.security;
 
 import com.maquigest.platform.iam.interfaces.acl.IamActorFacade;
 import com.maquigest.platform.inventory.domain.repositories.EquipmentRepository;
