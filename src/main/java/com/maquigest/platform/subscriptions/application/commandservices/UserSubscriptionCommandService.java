@@ -5,4 +5,5 @@ import com.maquigest.platform.subscriptions.domain.model.commands.*;
 public interface UserSubscriptionCommandService {
     Result<UserSubscription, ApplicationError> handle(CreateUserSubscriptionCommand command);
     Result<UserSubscription, ApplicationError> handle(CancelUserSubscriptionCommand command);
+    Result<UserSubscription, ApplicationError> handle(ChangeUserSubscriptionPlanCommand command);
 }
