@@ -3,7 +3,7 @@ import com.maquigest.platform.rentals.application.commandservices.RentalLifecycl
 import com.maquigest.platform.rentals.application.queryservices.RentalQueryService;
 import com.maquigest.platform.rentals.application.exceptions.RentalsException;
 import com.maquigest.platform.rentals.domain.model.commands.RegisterReturnCommand;
-import com.maquigest.platform.rentals.infrastructure.acl.iam.RentalActorPolicy;
+import com.maquigest.platform.rentals.interfaces.rest.security.RentalActorPolicy;
 import com.maquigest.platform.rentals.interfaces.rest.resources.EquipmentReturnResource;
 import com.maquigest.platform.rentals.interfaces.rest.transform.RentalResourceAssembler;
 import io.swagger.v3.oas.annotations.Operation;

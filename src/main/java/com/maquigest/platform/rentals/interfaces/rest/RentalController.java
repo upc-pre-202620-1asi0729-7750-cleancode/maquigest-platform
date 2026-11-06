@@ -2,7 +2,7 @@ package com.maquigest.platform.rentals.interfaces.rest;
 import com.maquigest.platform.rentals.application.queryservices.RentalQueryService;
 import com.maquigest.platform.rentals.application.exceptions.RentalsException;
 import com.maquigest.platform.rentals.domain.model.queries.*;
-import com.maquigest.platform.rentals.infrastructure.acl.iam.RentalActorPolicy;
+import com.maquigest.platform.rentals.interfaces.rest.security.RentalActorPolicy;
 import com.maquigest.platform.rentals.interfaces.rest.resources.RentalResource;
 import com.maquigest.platform.rentals.interfaces.rest.transform.RentalResourceAssembler;
 import io.swagger.v3.oas.annotations.Operation;

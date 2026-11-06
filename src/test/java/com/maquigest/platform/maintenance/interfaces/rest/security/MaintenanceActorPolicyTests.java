@@ -1,4 +1,4 @@
-package com.maquigest.platform.maintenance.infrastructure.acl.iam;
+package com.maquigest.platform.maintenance.interfaces.rest.security;
 
 import com.maquigest.platform.iam.interfaces.acl.IamActorFacade;
 import com.maquigest.platform.iam.interfaces.acl.IamActorFacade.ActorSnapshot;

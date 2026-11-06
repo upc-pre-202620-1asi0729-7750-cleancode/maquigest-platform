@@ -6,7 +6,7 @@ import com.maquigest.platform.subscriptions.application.queryservices.UserSubscr
 import com.maquigest.platform.subscriptions.domain.model.commands.*;
 import com.maquigest.platform.subscriptions.domain.model.queries.GetAllUserSubscriptionsQuery;
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionStatus;
-import com.maquigest.platform.subscriptions.infrastructure.acl.iam.SubscriptionOwnershipPolicy;
+import com.maquigest.platform.subscriptions.interfaces.rest.security.SubscriptionOwnershipPolicy;
 import com.maquigest.platform.subscriptions.interfaces.rest.resources.CreateUserSubscriptionResource;
 import com.maquigest.platform.subscriptions.interfaces.rest.resources.UserSubscriptionResource;
 import com.maquigest.platform.subscriptions.interfaces.rest.transform.UserSubscriptionResourceFromEntityAssembler;
