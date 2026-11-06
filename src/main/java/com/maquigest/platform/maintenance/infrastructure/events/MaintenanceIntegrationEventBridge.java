@@ -1,4 +1,5 @@
 package com.maquigest.platform.maintenance.infrastructure.events;
+import com.maquigest.platform.maintenance.interfaces.events.MaintenanceIntegrationEvent;
 import com.maquigest.platform.maintenance.domain.model.events.*;
 import java.time.Instant;
 import org.springframework.context.ApplicationEventPublisher;

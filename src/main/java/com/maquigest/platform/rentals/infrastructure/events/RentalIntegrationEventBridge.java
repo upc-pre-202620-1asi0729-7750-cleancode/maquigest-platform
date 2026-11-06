@@ -1,4 +1,5 @@
 package com.maquigest.platform.rentals.infrastructure.events;
+import com.maquigest.platform.rentals.interfaces.events.RentalIntegrationEvent;
 import com.maquigest.platform.rentals.domain.model.events.*;
 import java.time.Instant;
 import org.springframework.context.ApplicationEventPublisher;
