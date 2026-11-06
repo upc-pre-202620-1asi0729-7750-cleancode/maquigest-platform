@@ -63,6 +63,9 @@ public final class ProblemDetailFromApplicationErrorAssembler {
     private static URI toProblemTypeUri(String errorCode) {
         String slug = switch (errorCode) {
             case "VALIDATION_ERROR" -> "validation-error";
+            case String s when s.endsWith("_FORBIDDEN") -> "forbidden";
+            case String s when s.endsWith("_UNAUTHORIZED") -> "unauthorized";
+            case String s when s.endsWith("_INVALID") || s.endsWith("_VALIDATION_ERROR") -> "validation-error";
             case "BUSINESS_RULE_VIOLATION" -> "business-rule-violation";
             case "UNEXPECTED_ERROR" -> "unexpected-error";
             case String s when s.endsWith("_NOT_FOUND") -> "not-found";
@@ -76,6 +79,9 @@ public final class ProblemDetailFromApplicationErrorAssembler {
         return switch (errorCode) {
             case "VALIDATION_ERROR" -> "Validation Error";
             case "BUSINESS_RULE_VIOLATION" -> "Business Rule Violation";
+            case String s when s.endsWith("_FORBIDDEN") -> "Forbidden";
+            case String s when s.endsWith("_UNAUTHORIZED") -> "Unauthorized";
+            case String s when s.endsWith("_INVALID") || s.endsWith("_VALIDATION_ERROR") -> "Validation Error";
             case String s when s.endsWith("_NOT_FOUND") -> "Resource Not Found";
             case String s when s.endsWith("_CONFLICT") -> "Resource Conflict";
             default -> status instanceof HttpStatus httpStatus ? httpStatus.getReasonPhrase() : "Error";
@@ -105,6 +111,7 @@ public final class ProblemDetailFromApplicationErrorAssembler {
     private static String toMessageKeyFromErrorCode(String errorCode) {
         return switch (errorCode) {
             case "VALIDATION_ERROR" -> "error.validation.message";
+            case String s when s.endsWith("_INVALID") || s.endsWith("_VALIDATION_ERROR") -> "error.validation.message";
             case "BUSINESS_RULE_VIOLATION" -> "error.business-rule.message";
             case "UNEXPECTED_ERROR" -> "error.unexpected.message";
             case String s when s.endsWith("_NOT_FOUND") -> "error.not-found.message";
@@ -160,6 +167,9 @@ public final class ProblemDetailFromApplicationErrorAssembler {
     public static HttpStatusCode toStatusFromErrorCode(String errorCode) {
         return switch (errorCode) {
             case "VALIDATION_ERROR" -> HttpStatus.BAD_REQUEST;
+            case String s when s.endsWith("_INVALID") || s.endsWith("_VALIDATION_ERROR") -> HttpStatus.BAD_REQUEST;
+            case String s when s.endsWith("_FORBIDDEN") -> HttpStatus.FORBIDDEN;
+            case String s when s.endsWith("_UNAUTHORIZED") -> HttpStatus.UNAUTHORIZED;
             case String s when s.endsWith("_NOT_FOUND") -> HttpStatus.NOT_FOUND;
             case "BUSINESS_RULE_VIOLATION" -> HttpStatusCode.valueOf(422);
             case String s when s.endsWith("_CONFLICT") -> HttpStatus.CONFLICT;

@@ -24,8 +24,8 @@ class RentalRequestReschedulingTests {
     private final RentalRepository rentals = mock(RentalRepository.class);
     private final RentalEquipmentPort equipment = mock(RentalEquipmentPort.class);
     private final RentalSubscriptionPort subscriptions = mock(RentalSubscriptionPort.class);
-    private final RentalRequestCommandServiceImpl service =
-        new RentalRequestCommandServiceImpl(requests, rentals, equipment, subscriptions);
+    private final RentalRequestTransactionalExecutor service =
+        new RentalRequestTransactionalExecutor(requests, rentals, equipment, subscriptions);
 
     private static RentalPeriod period(int shift) {
         LocalDate start = LocalDate.now(ZoneId.of("America/Lima")).plusDays(10 + shift);
@@ -62,14 +62,14 @@ class RentalRequestReschedulingTests {
     @Test void malformedEquipmentIsRejectedWithoutAcquiringLock() {
         var ex = assertThrows(RentalsException.class, () ->
             service.handle(new CreateRentalRequestCommand(null, 2L, 1L, period(0))));
-        assertEquals(400, ex.status().value());
+        assertEquals(400, com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(ex.code()).value());
         verifyNoInteractions(requests, equipment, subscriptions);
     }
 
     @Test void requesterCannotSubmitOwnEquipment() {
         var ex = assertThrows(RentalsException.class, () ->
             service.handle(new CreateRentalRequestCommand(3L, 2L, 2L, period(0))));
-        assertEquals(400, ex.status().value());
+        assertEquals(400, com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(ex.code()).value());
         verifyNoInteractions(requests, equipment, subscriptions);
     }
 
@@ -95,7 +95,7 @@ class RentalRequestReschedulingTests {
         when(requests.existsOverlappingActiveRequest(3L, 2L, period(0), null)).thenReturn(true);
         var ex = assertThrows(RentalsException.class, () ->
             service.handle(new CreateRentalRequestCommand(3L, 2L, 1L, period(0))));
-        assertEquals(409, ex.status().value());
+        assertEquals(409, com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(ex.code()).value());
         verify(requests, never()).save(any());
         verifyNoInteractions(equipment);
     }
@@ -132,7 +132,7 @@ class RentalRequestReschedulingTests {
         when(requests.findByIdForUpdate(7L)).thenReturn(Optional.of(request(RentalRequestStatus.PENDING)));
         var ex = assertThrows(RentalsException.class, () ->
             service.handle(new RescheduleRentalRequestCommand(7L, 44L, period(4))));
-        assertEquals(403, ex.status().value());
+        assertEquals(403, com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(ex.code()).value());
         verify(requests, never()).save(any());
     }
 
@@ -140,7 +140,7 @@ class RentalRequestReschedulingTests {
         when(requests.findByIdForUpdate(7L)).thenReturn(Optional.of(request(RentalRequestStatus.APPROVED)));
         var ex = assertThrows(RentalsException.class, () ->
             service.handle(new RescheduleRentalRequestCommand(7L, 2L, period(4))));
-        assertEquals(409, ex.status().value());
+        assertEquals(409, com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(ex.code()).value());
         verify(requests, never()).save(any());
     }
 
@@ -149,7 +149,7 @@ class RentalRequestReschedulingTests {
         when(requests.existsOverlappingActiveRequest(3L, 2L, period(4), 7L)).thenReturn(true);
         var ex = assertThrows(RentalsException.class, () ->
             service.handle(new RescheduleRentalRequestCommand(7L, 2L, period(4))));
-        assertEquals(409, ex.status().value());
+        assertEquals(409, com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(ex.code()).value());
         verify(requests, never()).save(any());
     }
 
@@ -159,7 +159,7 @@ class RentalRequestReschedulingTests {
             .thenReturn(new RentalEquipmentPort.EquipmentFacts(3L, 1L, false));
         var ex = assertThrows(RentalsException.class, () ->
             service.handle(new RescheduleRentalRequestCommand(7L, 2L, period(4))));
-        assertEquals(409, ex.status().value());
+        assertEquals(409, com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(ex.code()).value());
         verify(requests, never()).save(any());
     }
 }

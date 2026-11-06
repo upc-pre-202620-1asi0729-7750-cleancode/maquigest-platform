@@ -8,6 +8,7 @@ import com.maquigest.platform.maintenance.domain.model.valueobjects.MaintenanceS
 import com.maquigest.platform.maintenance.interfaces.rest.security.MaintenanceActorPolicy;
 import com.maquigest.platform.maintenance.interfaces.rest.resources.*;
 import com.maquigest.platform.maintenance.interfaces.rest.transform.MaintenanceResourceAssembler;
+import com.maquigest.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,14 +44,14 @@ public class MaintenanceController {
             throw MaintenanceException.invalid("New maintenance must be COMPLETED or SCHEDULED");
         var cmd=new RegisterMaintenanceCommand(input.equipmentId(),
             MaintenanceResourceAssembler.parse(input.performedAt(),"performedAt"),input.type(),input.status());
-        return ResponseEntity.status(HttpStatus.CREATED).body(MaintenanceResourceAssembler.from(commands.handle(cmd,actor.userId())));
+        return ResponseEntity.status(HttpStatus.CREATED).body(MaintenanceResourceAssembler.from(ResponseEntityAssembler.valueOrThrow(commands.handle(cmd,actor.userId()), MaintenanceException::fromApplicationError)));
     }
     @PatchMapping(value="/{id}",consumes=APPLICATION_JSON_VALUE) @Operation(summary="Update lifecycle status, assign technician, acknowledge work and record progress")
     public MaintenanceResource patch(@PathVariable Long id,@RequestBody MaintenancePatchResource input,Authentication auth){
         var actor=policy.requireOwner(auth);
         if(input==null)throw MaintenanceException.invalid("Patch body is required");
         var cmd=new AdvanceMaintenanceCommand(id,input.status(),input.technician(),Boolean.TRUE.equals(input.acknowledge()),input.notes());
-        return MaintenanceResourceAssembler.from(commands.handle(cmd,actor.userId()));
+        return MaintenanceResourceAssembler.from(ResponseEntityAssembler.valueOrThrow(commands.handle(cmd,actor.userId()), MaintenanceException::fromApplicationError));
     }
     @GetMapping("/{id}/activities") @Operation(summary="Read maintenance tracking history")
     public List<MaintenanceActivityResource> activities(@PathVariable Long id,Authentication auth){var actor=policy.requireOwner(auth);

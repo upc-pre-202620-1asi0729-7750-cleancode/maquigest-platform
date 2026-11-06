@@ -6,6 +6,7 @@ import com.maquigest.platform.rentals.domain.model.commands.RegisterDeliveryComm
 import com.maquigest.platform.rentals.interfaces.rest.security.RentalActorPolicy;
 import com.maquigest.platform.rentals.interfaces.rest.resources.DeliveryResource;
 import com.maquigest.platform.rentals.interfaces.rest.transform.RentalResourceAssembler;
+import com.maquigest.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,7 +35,7 @@ public class DeliveryController {
     @PostMapping(consumes=APPLICATION_JSON_VALUE) @Operation(summary="Register delivery atomically and activate rental")
     public ResponseEntity<DeliveryResource> create(@RequestBody DeliveryResource body,Authentication auth) {
         if(body==null) throw RentalsException.invalid("Delivery body is required");
-        var delivered=commands.handle(new RegisterDeliveryCommand(body.rentalId(),actor(auth,true),body.deliveredAt(),body.notes()));
+        var delivered=ResponseEntityAssembler.valueOrThrow(commands.handle(new RegisterDeliveryCommand(body.rentalId(),actor(auth,true),body.deliveredAt(),body.notes())), RentalsException::fromApplicationError);
         return ResponseEntity.status(HttpStatus.CREATED).body(RentalResourceAssembler.from(delivered));
     }
 }

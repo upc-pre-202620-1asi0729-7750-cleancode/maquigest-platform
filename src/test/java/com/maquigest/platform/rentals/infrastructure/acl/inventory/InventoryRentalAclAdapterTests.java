@@ -35,9 +35,9 @@ class InventoryRentalAclAdapterTests {
         when(facade.reserve(8L, 1L, FROM, TO)).thenThrow(InventoryRentalFailure.conflict("Overlap"));
         when(facade.inspect(8L, FROM, TO)).thenThrow(InventoryRentalFailure.notFound());
         var acl = new InventoryRentalAclAdapter(facade);
-        assertEquals(403, assertThrows(RentalsException.class, () -> acl.reserve(8L, 2L, PERIOD)).status().value());
-        assertEquals(409, assertThrows(RentalsException.class, () -> acl.reserve(8L, 1L, PERIOD)).status().value());
-        assertEquals(404, assertThrows(RentalsException.class, () -> acl.inspect(8L, PERIOD)).status().value());
+        assertEquals(403, com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(assertThrows(RentalsException.class, () -> acl.reserve(8L, 2L, PERIOD)).code()).value());
+        assertEquals(409, com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(assertThrows(RentalsException.class, () -> acl.reserve(8L, 1L, PERIOD)).code()).value());
+        assertEquals(404, com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(assertThrows(RentalsException.class, () -> acl.inspect(8L, PERIOD)).code()).value());
     }
 
     @Test void forwardsDeliveryAndReturnToFacadeWithoutChangingArguments() {

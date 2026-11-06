@@ -26,7 +26,7 @@ class RentalLifecycleCommandServiceTests {
         when(rentals.findByIdForUpdate(10L)).thenReturn(Optional.of(rental(RentalStatus.CONFIRMED)));
         when(deliveries.findByRentalId(10L)).thenReturn(Optional.empty());
         when(deliveries.save(any())).thenAnswer(a->a.getArgument(0));
-        var svc=new RentalLifecycleCommandServiceImpl(rentals,deliveries,returns,equipment);
+        var svc=new RentalLifecycleTransactionalExecutor(rentals,deliveries,returns,equipment);
         var result=svc.handle(new RegisterDeliveryCommand(10L,1L,Instant.now().minusSeconds(30),"On site"));
         assertEquals("On site",result.notes());
         verify(equipment).markDelivered(3L,1L,99L);
@@ -39,7 +39,7 @@ class RentalLifecycleCommandServiceTests {
         when(deliveries.findByRentalId(10L)).thenReturn(Optional.of(new Delivery(1L,10L,Instant.now().minusSeconds(7200),"")));
         when(returns.findByRentalId(10L)).thenReturn(Optional.empty());
         when(returns.save(any())).thenAnswer(a->a.getArgument(0));
-        var svc=new RentalLifecycleCommandServiceImpl(rentals,deliveries,returns,equipment);
+        var svc=new RentalLifecycleTransactionalExecutor(rentals,deliveries,returns,equipment);
         svc.handle(new RegisterReturnCommand(10L,1L,Instant.now().minusSeconds(3600),"Inspection",true));
         verify(equipment).completeReturn(3L,1L,99L,true);
         verify(rentals).save(argThat(r->r.getStatus()==RentalStatus.COMPLETED));
@@ -50,9 +50,9 @@ class RentalLifecycleCommandServiceTests {
         var future=LocalDate.now(LIMA).plusDays(5);
         when(rentals.findByIdForUpdate(10L)).thenReturn(Optional.of(rental(RentalStatus.CONFIRMED,future,future.plusDays(2))));
         when(deliveries.findByRentalId(10L)).thenReturn(Optional.empty());
-        var svc=new RentalLifecycleCommandServiceImpl(rentals,deliveries,returns,equipment);
-        assertEquals(409,assertThrows(RentalsException.class,()->svc.handle(new RegisterDeliveryCommand(
-            10L,1L,Instant.now(),"Too early"))).status().value());
+        var svc=new RentalLifecycleTransactionalExecutor(rentals,deliveries,returns,equipment);
+        assertEquals(409,com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(assertThrows(RentalsException.class, () -> svc.handle(new RegisterDeliveryCommand(
+            10L,1L,Instant.now(),"Too early"))).code()).value());
         verifyNoInteractions(equipment);
         verify(rentals,never()).save(any());
     }
@@ -61,9 +61,9 @@ class RentalLifecycleCommandServiceTests {
         var returns=mock(EquipmentReturnRepository.class);var equipment=mock(RentalEquipmentPort.class);
         when(rentals.findByIdForUpdate(10L)).thenReturn(Optional.of(rental(RentalStatus.CONFIRMED)));
         when(deliveries.findByRentalId(10L)).thenReturn(Optional.empty());
-        var svc=new RentalLifecycleCommandServiceImpl(rentals,deliveries,returns,equipment);
-        assertEquals(400,assertThrows(RentalsException.class,()->svc.handle(new RegisterDeliveryCommand(
-            10L,1L,Instant.now().plusSeconds(3600),"Future"))).status().value());
+        var svc=new RentalLifecycleTransactionalExecutor(rentals,deliveries,returns,equipment);
+        assertEquals(400,com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(assertThrows(RentalsException.class, () -> svc.handle(new RegisterDeliveryCommand(
+            10L,1L,Instant.now().plusSeconds(3600),"Future"))).code()).value());
         verifyNoInteractions(equipment);
     }
     @Test void returnWithFutureTimestampIsRejected() {
@@ -72,9 +72,9 @@ class RentalLifecycleCommandServiceTests {
         when(rentals.findByIdForUpdate(10L)).thenReturn(Optional.of(rental(RentalStatus.ACTIVE)));
         when(returns.findByRentalId(10L)).thenReturn(Optional.empty());
         when(deliveries.findByRentalId(10L)).thenReturn(Optional.of(new Delivery(1L,10L,Instant.now().minusSeconds(3600),"")));
-        var svc=new RentalLifecycleCommandServiceImpl(rentals,deliveries,returns,equipment);
-        assertEquals(400,assertThrows(RentalsException.class,()->svc.handle(new RegisterReturnCommand(
-            10L,1L,Instant.now().plusSeconds(3600),"Future",false))).status().value());
+        var svc=new RentalLifecycleTransactionalExecutor(rentals,deliveries,returns,equipment);
+        assertEquals(400,com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(assertThrows(RentalsException.class, () -> svc.handle(new RegisterReturnCommand(
+            10L,1L,Instant.now().plusSeconds(3600),"Future",false))).code()).value());
         verifyNoInteractions(equipment);
     }
     @Test void returnBeforeRentalPeriodStartsIsRejected() {
@@ -84,18 +84,18 @@ class RentalLifecycleCommandServiceTests {
         when(rentals.findByIdForUpdate(10L)).thenReturn(Optional.of(rental(RentalStatus.ACTIVE,future,future.plusDays(2))));
         when(returns.findByRentalId(10L)).thenReturn(Optional.empty());
         when(deliveries.findByRentalId(10L)).thenReturn(Optional.of(new Delivery(1L,10L,Instant.now().minusSeconds(3600),"")));
-        var svc=new RentalLifecycleCommandServiceImpl(rentals,deliveries,returns,equipment);
-        assertEquals(409,assertThrows(RentalsException.class,()->svc.handle(new RegisterReturnCommand(
-            10L,1L,Instant.now(),"Before period",false))).status().value());
+        var svc=new RentalLifecycleTransactionalExecutor(rentals,deliveries,returns,equipment);
+        assertEquals(409,com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(assertThrows(RentalsException.class, () -> svc.handle(new RegisterReturnCommand(
+            10L,1L,Instant.now(),"Before period",false))).code()).value());
         verifyNoInteractions(equipment);
     }
     @Test void unauthorizedDeliveryCannotMutateInventory() {
         var rentals=mock(RentalRepository.class);var deliveries=mock(DeliveryRepository.class);
         var returns=mock(EquipmentReturnRepository.class);var equipment=mock(RentalEquipmentPort.class);
         when(rentals.findByIdForUpdate(10L)).thenReturn(Optional.of(rental(RentalStatus.CONFIRMED)));
-        var svc=new RentalLifecycleCommandServiceImpl(rentals,deliveries,returns,equipment);
-        assertEquals(403,assertThrows(RentalsException.class,()->svc.handle(new RegisterDeliveryCommand(
-            10L,2L,Instant.now(),""))).status().value());
+        var svc=new RentalLifecycleTransactionalExecutor(rentals,deliveries,returns,equipment);
+        assertEquals(403,com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(assertThrows(RentalsException.class, () -> svc.handle(new RegisterDeliveryCommand(
+            10L,2L,Instant.now(),""))).code()).value());
         verifyNoInteractions(equipment);
     }
 }

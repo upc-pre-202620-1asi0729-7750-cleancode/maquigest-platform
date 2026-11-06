@@ -5,8 +5,10 @@ import com.maquigest.platform.rentals.domain.model.commands.CreateRentalRequestC
 import com.maquigest.platform.rentals.domain.model.commands.ResolveRentalRequestCommand;
 import com.maquigest.platform.rentals.domain.model.commands.RescheduleRentalRequestCommand;
 
+import com.maquigest.platform.shared.application.result.Result;
+import com.maquigest.platform.shared.application.result.ApplicationError;
 public interface RentalRequestCommandService {
-    RentalRequest handle(CreateRentalRequestCommand command);
-    RentalRequest handle(ResolveRentalRequestCommand command);
-    RentalRequest handle(RescheduleRentalRequestCommand command);
+    Result<RentalRequest, ApplicationError> handle(CreateRentalRequestCommand command);
+    Result<RentalRequest, ApplicationError> handle(ResolveRentalRequestCommand command);
+    Result<RentalRequest, ApplicationError> handle(RescheduleRentalRequestCommand command);
 }
