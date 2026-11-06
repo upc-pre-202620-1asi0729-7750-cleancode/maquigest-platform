@@ -6,6 +6,7 @@ import com.maquigest.platform.rentals.domain.model.commands.RegisterReturnComman
 import com.maquigest.platform.rentals.interfaces.rest.security.RentalActorPolicy;
 import com.maquigest.platform.rentals.interfaces.rest.resources.EquipmentReturnResource;
 import com.maquigest.platform.rentals.interfaces.rest.transform.RentalResourceAssembler;
+import com.maquigest.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,7 +35,7 @@ public class EquipmentReturnController {
     @PostMapping(consumes=APPLICATION_JSON_VALUE) @Operation(summary="Register return, complete rental and release Inventory reservation atomically")
     public ResponseEntity<EquipmentReturnResource> create(@RequestBody EquipmentReturnResource body,Authentication auth) {
         if(body==null) throw RentalsException.invalid("Equipment return body is required");
-        var returned=commands.handle(new RegisterReturnCommand(body.rentalId(),actor(auth,true),body.returnedAt(),body.notes(),body.maintenanceRequired()));
+        var returned=ResponseEntityAssembler.valueOrThrow(commands.handle(new RegisterReturnCommand(body.rentalId(),actor(auth,true),body.returnedAt(),body.notes(),body.maintenanceRequired())), RentalsException::fromApplicationError);
         return ResponseEntity.status(HttpStatus.CREATED).body(RentalResourceAssembler.from(returned));
     }
 }

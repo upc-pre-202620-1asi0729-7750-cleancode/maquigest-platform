@@ -21,7 +21,7 @@ class RentalRequestCommandServiceTests {
         when(inventory.reserve(3L,1L,period())).thenReturn(99L);
         when(rentals.findByRequestId(7L)).thenReturn(Optional.empty());
         when(requests.save(any())).thenAnswer(a->a.getArgument(0));
-        var service=new RentalRequestCommandServiceImpl(requests,rentals,inventory,subscriptions);
+        var service=new RentalRequestTransactionalExecutor(requests,rentals,inventory,subscriptions);
         var result=service.handle(new ResolveRentalRequestCommand(7L,1L,RentalRequestStatus.APPROVED));
         assertEquals(RentalRequestStatus.APPROVED,result.getStatus());
         verify(rentals,times(1)).save(any());verify(inventory).reserve(3L,1L,period());
@@ -30,9 +30,8 @@ class RentalRequestCommandServiceTests {
         var requests=mock(RentalRequestRepository.class);var rentals=mock(RentalRepository.class);
         var inventory=mock(RentalEquipmentPort.class);var subscriptions=mock(RentalSubscriptionPort.class);
         when(requests.findByIdForUpdate(7L)).thenReturn(Optional.of(pending()));
-        var service=new RentalRequestCommandServiceImpl(requests,rentals,inventory,subscriptions);
-        assertEquals(403,assertThrows(RentalsException.class,()->
-            service.handle(new ResolveRentalRequestCommand(7L,22L,RentalRequestStatus.APPROVED))).status().value());
+        var service=new RentalRequestTransactionalExecutor(requests,rentals,inventory,subscriptions);
+        assertEquals(403,com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(assertThrows(RentalsException.class, () -> service.handle(new ResolveRentalRequestCommand(7L,22L,RentalRequestStatus.APPROVED))).code()).value());
         verifyNoInteractions(inventory);
     }
     @Test void rejectingNeverReservesInventory(){
@@ -40,7 +39,7 @@ class RentalRequestCommandServiceTests {
         var inventory=mock(RentalEquipmentPort.class);var subscriptions=mock(RentalSubscriptionPort.class);
         when(requests.findByIdForUpdate(7L)).thenReturn(Optional.of(pending()));
         when(requests.save(any())).thenAnswer(a->a.getArgument(0));
-        var result=new RentalRequestCommandServiceImpl(requests,rentals,inventory,subscriptions)
+        var result=new RentalRequestTransactionalExecutor(requests,rentals,inventory,subscriptions)
             .handle(new ResolveRentalRequestCommand(7L,1L,RentalRequestStatus.REJECTED));
         assertEquals(RentalRequestStatus.REJECTED,result.getStatus());verifyNoInteractions(inventory,rentals);
     }

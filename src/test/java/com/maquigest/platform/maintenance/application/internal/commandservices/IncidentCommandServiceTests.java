@@ -15,7 +15,7 @@ class IncidentCommandServiceTests {
    var inventory=mock(MaintenanceInventoryPort.class);var rentals=mock(MaintenanceRentalPort.class);
    when(inventory.lock(3L)).thenReturn(new MaintenanceInventoryPort.EquipmentFacts(3L,1L,"EQ-3","Excavator","AVAILABLE"));
    when(incidents.save(any())).thenAnswer(i->i.getArgument(0));
-   var result=new IncidentCommandServiceImpl(incidents,maintenances,inventory,rentals)
+   var result=new IncidentTransactionalExecutor(incidents,maintenances,inventory,rentals)
        .handle(new ReportIncidentCommand(3L,"Hydraulic failure",true),1L);
    assertTrue(result.isBlocksRental());verify(inventory).markMaintenance(3L,1L);verify(incidents).save(any());
  }
@@ -24,9 +24,9 @@ class IncidentCommandServiceTests {
    var inventory=mock(MaintenanceInventoryPort.class);var rentals=mock(MaintenanceRentalPort.class);
    when(inventory.lock(3L)).thenReturn(new MaintenanceInventoryPort.EquipmentFacts(3L,1L,"EQ-3","Excavator","RENTED"));
    when(rentals.hasActiveRental(3L,1L)).thenReturn(true);
-   var service=new IncidentCommandServiceImpl(incidents,maintenances,inventory,rentals);
-   assertEquals(409,assertThrows(MaintenanceException.class,()->service.handle(
-       new ReportIncidentCommand(3L,"Failure",true),1L)).status().value());
+   var service=new IncidentTransactionalExecutor(incidents,maintenances,inventory,rentals);
+   assertEquals(409,com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(assertThrows(MaintenanceException.class, () -> service.handle(
+       new ReportIncidentCommand(3L,"Failure",true),1L)).code()).value());
    verify(inventory,never()).markMaintenance(any(),any());verifyNoInteractions(incidents);
  }
  @Test void actorCannotModifyOtherOwnersIncident(){
@@ -36,9 +36,9 @@ class IncidentCommandServiceTests {
        com.maquigest.platform.maintenance.domain.model.valueobjects.IncidentStatus.OPEN,null);
    when(incidents.findById(5L)).thenReturn(Optional.of(incident));
    when(inventory.lock(3L)).thenReturn(new MaintenanceInventoryPort.EquipmentFacts(3L,1L,"EQ-3","Excavator","AVAILABLE"));
-   var service=new IncidentCommandServiceImpl(incidents,maintenances,inventory,rentals);
-   assertEquals(403,assertThrows(MaintenanceException.class,()->service.handle(
-       new PatchIncidentCommand(5L,true,null,null),2L)).status().value());
+   var service=new IncidentTransactionalExecutor(incidents,maintenances,inventory,rentals);
+   assertEquals(403,com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(assertThrows(MaintenanceException.class, () -> service.handle(
+       new PatchIncidentCommand(5L,true,null,null),2L)).code()).value());
    verify(incidents,never()).save(any());
  }
 }
