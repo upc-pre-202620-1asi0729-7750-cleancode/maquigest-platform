@@ -1,71 +1,47 @@
 package com.maquigest.platform.maintenance.application.internal.commandservices;
+
 import com.maquigest.platform.maintenance.application.commandservices.IncidentCommandService;
 import com.maquigest.platform.maintenance.application.exceptions.MaintenanceException;
-import com.maquigest.platform.maintenance.application.ports.*;
-import com.maquigest.platform.maintenance.domain.model.aggregates.*;
 import com.maquigest.platform.maintenance.domain.model.commands.*;
-import com.maquigest.platform.maintenance.domain.model.valueobjects.*;
-import com.maquigest.platform.maintenance.domain.repositories.*;
-import java.time.Instant;
+import com.maquigest.platform.maintenance.domain.model.aggregates.Incident;
+import com.maquigest.platform.shared.application.result.ApplicationError;
+import com.maquigest.platform.shared.application.result.Result;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-@Service @Transactional
+
+/** Application Result boundary OUTSIDE the transactional executor. */
+@Service
 public class IncidentCommandServiceImpl implements IncidentCommandService {
-    private final IncidentRepository incidents;
-    private final MaintenanceRepository maintenances;
-    private final MaintenanceInventoryPort inventory;
-    private final MaintenanceRentalPort rentals;
-    public IncidentCommandServiceImpl(IncidentRepository incidents,MaintenanceRepository maintenances,
-                                      MaintenanceInventoryPort inventory,MaintenanceRentalPort rentals){
-        this.incidents=incidents;this.maintenances=maintenances;this.inventory=inventory;this.rentals=rentals;
+    private final IncidentTransactionalExecutor executor;
+
+    public IncidentCommandServiceImpl(IncidentTransactionalExecutor executor) {
+        this.executor = executor;
     }
-    private MaintenanceInventoryPort.EquipmentFacts ownedAndLocked(Long equipmentId,Long actor){
-        if(equipmentId==null||equipmentId<=0||actor==null||actor<=0)throw MaintenanceException.invalid("Invalid equipment or actor");
-        var facts=inventory.lock(equipmentId);
-        if(!actor.equals(facts.ownerUserId()))throw MaintenanceException.forbidden();
-        return facts;
-    }
-    @Override public Incident handle(ReportIncidentCommand command,Long actor){
-        if(command==null)throw MaintenanceException.invalid("Request body is required");
-        var facts=ownedAndLocked(command.equipmentId(),actor);
-        if(command.blocksRental()) {
-            if(rentals.hasActiveRental(facts.id(),actor))throw MaintenanceException.conflict("Equipment has an active rental");
-            inventory.markMaintenance(facts.id(),actor);
+
+    @Override
+    public Result<Incident, ApplicationError> handle(ReportIncidentCommand command, Long actorUserId) {
+        try {
+            return Result.success(executor.handle(command, actorUserId));
+        } catch (MaintenanceException failure) {
+            return Result.failure(new ApplicationError(failure.code(), failure.getMessage()));
         }
-        try {return incidents.save(Incident.report(facts.id(),actor,command.description(),command.blocksRental(),Instant.now()));}
-        catch(IllegalArgumentException ex){throw MaintenanceException.invalid(ex.getMessage());}
     }
-    @Override public Incident handle(PatchIncidentCommand command,Long actor){
-        if(command==null||command.incidentId()==null||command.incidentId()<=0)throw MaintenanceException.invalid("Invalid incident id");
-        // Lock ordering is Inventory -> Incident for every operation involving both contexts.
-        var original=incidents.findById(command.incidentId()).orElseThrow(()->MaintenanceException.notFound("Incident"));
-        var facts=ownedAndLocked(original.getEquipmentId(),actor);
-        var incident=incidents.findByIdForUpdate(command.incidentId()).orElseThrow(()->MaintenanceException.notFound("Incident"));
-        if(!incident.getOwnerUserId().equals(actor)||!incident.getEquipmentId().equals(facts.id()))throw MaintenanceException.forbidden();
-        boolean restrict=Boolean.TRUE.equals(command.blocksRental());
-        boolean resolve=command.status()==IncidentStatus.RESOLVED;
-        if(restrict==resolve)throw MaintenanceException.invalid("Choose exactly one action: blocksRental=true or status=RESOLVED");
-        if(restrict){
-            if(rentals.hasActiveRental(facts.id(),actor))throw MaintenanceException.conflict("Equipment has an active rental");
-            try{incident.requireRestriction();}catch(IllegalStateException ex){throw MaintenanceException.conflict(ex.getMessage());}
-            inventory.markMaintenance(facts.id(),actor);
-        }else{
-            if(command.blocksRental()!=null)throw MaintenanceException.invalid("Cannot change rental restriction when resolving");
-            try{incident.resolve(command.resolvedAt()==null?Instant.now():command.resolvedAt());}
-            catch(IllegalStateException ex){throw MaintenanceException.conflict(ex.getMessage());}
-            catch(IllegalArgumentException ex){throw MaintenanceException.invalid(ex.getMessage());}
+
+    @Override
+    public Result<Incident, ApplicationError> handle(PatchIncidentCommand command, Long actorUserId) {
+        try {
+            return Result.success(executor.handle(command, actorUserId));
+        } catch (MaintenanceException failure) {
+            return Result.failure(new ApplicationError(failure.code(), failure.getMessage()));
         }
-        return incidents.save(incident);
     }
-    @Override public void handle(ReactivateEquipmentCommand command,Long actor){
-        if(command==null||!command.inspectionConfirmed())throw MaintenanceException.invalid("Technical inspection confirmation is required");
-        var facts=ownedAndLocked(command.equipmentId(),actor);
-        if(!"MAINTENANCE".equals(facts.status()))throw MaintenanceException.conflict("Only MAINTENANCE equipment can be reactivated");
-        if(!incidents.hadBlocking(facts.id()))throw MaintenanceException.conflict("Blocking incident history is required");
-        if(incidents.hasOpenBlocking(facts.id()))throw MaintenanceException.conflict("Open blocking incident prevents reactivation");
-        if(rentals.hasActiveRental(facts.id(),actor))throw MaintenanceException.conflict("Active rental prevents reactivation");
-        if(maintenances.findByEquipmentId(facts.id()).stream().anyMatch(m->m.getStatus()==MaintenanceStatus.IN_PROGRESS))
-            throw MaintenanceException.conflict("Maintenance is still in progress");
-        inventory.reactivate(facts.id(),actor);
+
+    @Override
+    public Result<Boolean, ApplicationError> handle(ReactivateEquipmentCommand command, Long actorUserId) {
+        try {
+            executor.handle(command, actorUserId);
+            return Result.success(Boolean.TRUE);
+        } catch (MaintenanceException failure) {
+            return Result.failure(new ApplicationError(failure.code(), failure.getMessage()));
+        }
     }
 }

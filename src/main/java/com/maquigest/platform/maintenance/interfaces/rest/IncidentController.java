@@ -8,6 +8,7 @@ import com.maquigest.platform.maintenance.domain.model.valueobjects.IncidentStat
 import com.maquigest.platform.maintenance.interfaces.rest.security.MaintenanceActorPolicy;
 import com.maquigest.platform.maintenance.interfaces.rest.resources.*;
 import com.maquigest.platform.maintenance.interfaces.rest.transform.MaintenanceResourceAssembler;
+import com.maquigest.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -44,7 +45,7 @@ public class IncidentController {
         if(input==null||input.id()!=null&&input.id()!=0)throw MaintenanceException.invalid("New incident must not have an id");
         if(input.status()!=null&&input.status()!=IncidentStatus.OPEN)throw MaintenanceException.invalid("New incident status must be OPEN");
         if(input.resolvedAt()!=null)throw MaintenanceException.invalid("New incident cannot be resolved");
-        var created=commands.handle(new ReportIncidentCommand(input.equipmentId(),input.description(),Boolean.TRUE.equals(input.blocksRental())),actor.userId());
+        var created=ResponseEntityAssembler.valueOrThrow(commands.handle(new ReportIncidentCommand(input.equipmentId(),input.description(),Boolean.TRUE.equals(input.blocksRental())),actor.userId()), MaintenanceException::fromApplicationError);
         return ResponseEntity.status(HttpStatus.CREATED).body(MaintenanceResourceAssembler.from(created));
     }
     @PatchMapping(value="/{id}",consumes=APPLICATION_JSON_VALUE)
@@ -54,13 +55,13 @@ public class IncidentController {
         if(body==null)throw MaintenanceException.invalid("Patch body is required");
         var cmd=new PatchIncidentCommand(id,body.blocksRental(),body.status(),
             MaintenanceResourceAssembler.parseOptional(body.resolvedAt(),"resolvedAt"));
-        return MaintenanceResourceAssembler.from(commands.handle(cmd,actor.userId()));
+        return MaintenanceResourceAssembler.from(ResponseEntityAssembler.valueOrThrow(commands.handle(cmd,actor.userId()), MaintenanceException::fromApplicationError));
     }
     @PostMapping(value="/equipment/{equipmentId}/reactivate",consumes=APPLICATION_JSON_VALUE)
     @Operation(summary="Reactivate after inspection; rejects unresolved blockers and active rentals")
     public ResponseEntity<Void> reactivate(@PathVariable Long equipmentId,@RequestBody InspectionResource body,Authentication auth){
         var actor=policy.requireOwner(auth);
-        commands.handle(new ReactivateEquipmentCommand(equipmentId,body!=null&&Boolean.TRUE.equals(body.inspectionConfirmed())),actor.userId());
+        ResponseEntityAssembler.valueOrThrow(commands.handle(new ReactivateEquipmentCommand(equipmentId,body!=null&&Boolean.TRUE.equals(body.inspectionConfirmed())),actor.userId()), MaintenanceException::fromApplicationError);
         return ResponseEntity.noContent().build();
     }
 }
