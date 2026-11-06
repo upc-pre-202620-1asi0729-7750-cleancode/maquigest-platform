@@ -1,4 +1,4 @@
-package com.maquigest.platform.profiles.infrastructure.acl.iam;
+package com.maquigest.platform.profiles.interfaces.rest.security;
 
 import com.maquigest.platform.iam.interfaces.acl.IamActorFacade;
 import com.maquigest.platform.profiles.domain.repositories.CompanyProfileRepository;

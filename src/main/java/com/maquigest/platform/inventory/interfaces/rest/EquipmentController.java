@@ -7,7 +7,7 @@ import com.maquigest.platform.inventory.domain.model.commands.DeleteEquipmentCom
 import com.maquigest.platform.inventory.domain.model.commands.ReserveEquipmentPeriodCommand;
 import com.maquigest.platform.inventory.domain.model.commands.ChangeEquipmentOperationalStatusCommand;
 import com.maquigest.platform.inventory.domain.model.queries.*;
-import com.maquigest.platform.inventory.infrastructure.acl.iam.InventoryOwnershipPolicy;
+import com.maquigest.platform.inventory.interfaces.rest.security.InventoryOwnershipPolicy;
 import com.maquigest.platform.inventory.interfaces.rest.resources.*;
 import com.maquigest.platform.inventory.interfaces.rest.transform.*;
 import com.maquigest.platform.shared.application.result.*;

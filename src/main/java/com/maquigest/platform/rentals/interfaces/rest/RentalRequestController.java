@@ -6,7 +6,7 @@ import com.maquigest.platform.rentals.application.queryservices.RentalQueryServi
 import com.maquigest.platform.rentals.domain.model.commands.*;
 import com.maquigest.platform.rentals.domain.model.queries.*;
 import com.maquigest.platform.rentals.domain.model.valueobjects.RentalRequestStatus;
-import com.maquigest.platform.rentals.infrastructure.acl.iam.RentalActorPolicy;
+import com.maquigest.platform.rentals.interfaces.rest.security.RentalActorPolicy;
 import com.maquigest.platform.rentals.interfaces.rest.resources.RentalRequestResource;
 import com.maquigest.platform.rentals.interfaces.rest.resources.RescheduleRentalRequestResource;
 import com.maquigest.platform.rentals.interfaces.rest.transform.RentalResourceAssembler;
