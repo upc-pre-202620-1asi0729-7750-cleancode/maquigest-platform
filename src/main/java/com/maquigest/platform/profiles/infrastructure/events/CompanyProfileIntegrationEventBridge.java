@@ -1,4 +1,5 @@
 package com.maquigest.platform.profiles.infrastructure.events;
+import com.maquigest.platform.profiles.interfaces.events.CompanyProfileIntegrationEvent;
 import com.maquigest.platform.profiles.domain.model.events.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
