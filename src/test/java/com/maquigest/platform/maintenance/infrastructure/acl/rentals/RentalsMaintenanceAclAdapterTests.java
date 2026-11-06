@@ -1,27 +1,29 @@
 package com.maquigest.platform.maintenance.infrastructure.acl.rentals;
-import com.maquigest.platform.rentals.domain.repositories.*;
-import com.maquigest.platform.rentals.domain.model.aggregates.Rental;
-import com.maquigest.platform.rentals.domain.model.entities.*;
-import com.maquigest.platform.rentals.domain.model.valueobjects.*;
+
+import com.maquigest.platform.rentals.interfaces.acl.RentalsMaintenanceFacade;
 import org.junit.jupiter.api.Test;
-import java.time.*;
-import java.util.*;
+import java.time.Instant;
+import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+
 class RentalsMaintenanceAclAdapterTests {
-    @Test void completedRentalUsesActualReturnTimestampInHistory() {
-        var rentals=mock(RentalRepository.class);
-        var deliveries=mock(DeliveryRepository.class);
-        var returns=mock(EquipmentReturnRepository.class);
-        var rented=new Rental(10L,7L,3L,2L,1L,99L,
-            new RentalPeriod(LocalDate.of(2026,11,25),LocalDate.of(2026,11,27)),RentalStatus.COMPLETED);
-        var actualReturn=Instant.parse("2026-11-04T12:00:00Z");
-        when(rentals.findVisibleTo(1L)).thenReturn(List.of(rented));
-        when(returns.findByRentalId(10L)).thenReturn(Optional.of(new EquipmentReturn(1L,10L,actualReturn,"",false)));
-        var adapter=new RentalsMaintenanceAclAdapter(rentals,deliveries,returns);
+    private final RentalsMaintenanceFacade facade=mock(RentalsMaintenanceFacade.class);
+    private final RentalsMaintenanceAclAdapter adapter=new RentalsMaintenanceAclAdapter(facade);
+
+    @Test void delegatesActiveRentalCheck() {
+        when(facade.hasActiveRental(3L,1L)).thenReturn(true);
+        assertTrue(adapter.hasActiveRental(3L,1L));
+        verify(facade).hasActiveRental(3L,1L);
+    }
+    @Test void mapsImmutableRentalHistoryWithoutChangingTimestamp() {
+        Instant returned=Instant.parse("2026-11-04T12:00:00Z");
+        when(facade.history(3L,1L)).thenReturn(List.of(new RentalsMaintenanceFacade.RentalHistory(
+            10L, returned, "Rental #10 (2026-11-25 to 2026-11-27)","COMPLETED")));
         var result=adapter.history(3L,1L);
         assertEquals(1,result.size());
-        assertEquals(actualReturn,result.getFirst().occurredAt());
+        assertEquals(returned,result.getFirst().occurredAt());
         assertEquals("COMPLETED",result.getFirst().status());
+        assertEquals("Rental #10 (2026-11-25 to 2026-11-27)",result.getFirst().description());
     }
 }
