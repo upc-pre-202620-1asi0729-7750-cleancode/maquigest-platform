@@ -1,41 +1,54 @@
 package com.maquigest.platform.maintenance.infrastructure.acl.inventory;
-import com.maquigest.platform.maintenance.application.ports.MaintenanceInventoryPort;
+
+import com.maquigest.platform.inventory.interfaces.acl.InventoryMaintenanceFacade;
+import com.maquigest.platform.inventory.interfaces.acl.InventoryMaintenanceFailure;
 import com.maquigest.platform.maintenance.application.exceptions.MaintenanceException;
-import com.maquigest.platform.inventory.domain.repositories.EquipmentRepository;
-import com.maquigest.platform.inventory.domain.model.aggregates.Equipment;
-import com.maquigest.platform.inventory.domain.model.valueobjects.EquipmentStatus;
+import com.maquigest.platform.maintenance.application.ports.MaintenanceInventoryPort;
 import org.springframework.stereotype.Component;
+
+/** Anti-corruption adapter: Maintenance sees its own facts and error vocabulary only. */
 @Component
 public class InventoryMaintenanceAclAdapter implements MaintenanceInventoryPort {
-    private final EquipmentRepository inventory;
-    public InventoryMaintenanceAclAdapter(EquipmentRepository inventory){this.inventory=inventory;}
-    private static EquipmentFacts map(Equipment e){return new EquipmentFacts(e.getId(),e.getUserId(),e.getCode(),e.getName(),e.getStatus().name());}
-    @Override public EquipmentFacts inspect(Long id){
-        if(id==null||id<=0)throw MaintenanceException.invalid("Invalid equipment id");
-        return map(inventory.findById(id).orElseThrow(()->MaintenanceException.notFound("Equipment")));
+    private final InventoryMaintenanceFacade inventory;
+
+    public InventoryMaintenanceAclAdapter(InventoryMaintenanceFacade inventory) {
+        this.inventory = inventory;
     }
-    @Override public EquipmentFacts lock(Long id){
-        if(id==null||id<=0)throw MaintenanceException.invalid("Invalid equipment id");
-        return map(inventory.findByIdForUpdate(id).orElseThrow(()->MaintenanceException.notFound("Equipment")));
+
+    private static EquipmentFacts map(InventoryMaintenanceFacade.EquipmentSnapshot item) {
+        return new EquipmentFacts(item.id(), item.ownerUserId(), item.code(), item.name(), item.status());
     }
-    private Equipment owned(Long id,Long owner){
-        var e=inventory.findByIdForUpdate(id).orElseThrow(()->MaintenanceException.notFound("Equipment"));
-        if(!e.getUserId().equals(owner))throw MaintenanceException.forbidden();
-        return e;
+
+    private static MaintenanceException translate(InventoryMaintenanceFailure failure) {
+        return switch (failure.kind()) {
+            case INVALID -> MaintenanceException.invalid(failure.getMessage());
+            case NOT_FOUND -> MaintenanceException.notFound("Equipment");
+            case FORBIDDEN -> MaintenanceException.forbidden();
+            case CONFLICT -> MaintenanceException.conflict(failure.getMessage());
+        };
     }
-    @Override public void markMaintenance(Long id,Long owner){
-        var e=owned(id,owner);
-        if(e.getStatus()==EquipmentStatus.RENTED)throw MaintenanceException.conflict("Rented equipment cannot enter maintenance directly");
-        if(e.getStatus()==EquipmentStatus.MAINTENANCE)return;
-        try{e.changeOperationalStatus(EquipmentStatus.MAINTENANCE);}
-        catch(IllegalStateException ex){throw MaintenanceException.conflict(ex.getMessage());}
-        inventory.save(e);
+
+    @Override
+    public EquipmentFacts inspect(Long equipmentId) {
+        try { return map(inventory.inspect(equipmentId)); }
+        catch (InventoryMaintenanceFailure failure) { throw translate(failure); }
     }
-    @Override public void reactivate(Long id,Long owner){
-        var e=owned(id,owner);
-        if(e.getStatus()!=EquipmentStatus.MAINTENANCE)throw MaintenanceException.conflict("Equipment must be in MAINTENANCE");
-        try{e.changeOperationalStatus(EquipmentStatus.AVAILABLE);}
-        catch(IllegalStateException ex){throw MaintenanceException.conflict(ex.getMessage());}
-        inventory.save(e);
+
+    @Override
+    public EquipmentFacts lock(Long equipmentId) {
+        try { return map(inventory.lock(equipmentId)); }
+        catch (InventoryMaintenanceFailure failure) { throw translate(failure); }
+    }
+
+    @Override
+    public void markMaintenance(Long equipmentId, Long ownerUserId) {
+        try { inventory.markMaintenance(equipmentId, ownerUserId); }
+        catch (InventoryMaintenanceFailure failure) { throw translate(failure); }
+    }
+
+    @Override
+    public void reactivate(Long equipmentId, Long ownerUserId) {
+        try { inventory.reactivate(equipmentId, ownerUserId); }
+        catch (InventoryMaintenanceFailure failure) { throw translate(failure); }
     }
 }
