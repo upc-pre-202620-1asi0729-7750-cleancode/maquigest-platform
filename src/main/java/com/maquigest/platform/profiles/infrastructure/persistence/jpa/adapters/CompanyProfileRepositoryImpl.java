@@ -4,14 +4,14 @@ import com.maquigest.platform.profiles.domain.repositories.CompanyProfileReposit
 import com.maquigest.platform.profiles.infrastructure.persistence.jpa.repositories.CompanyProfilePersistenceRepository;
 import com.maquigest.platform.profiles.infrastructure.persistence.jpa.entities.CompanyProfilePersistenceEntity;
 import com.maquigest.platform.profiles.infrastructure.persistence.jpa.assemblers.CompanyProfilePersistenceAssembler;
-import org.springframework.context.ApplicationEventPublisher;
+import com.maquigest.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 import java.util.*;
 @Repository
 public class CompanyProfileRepositoryImpl implements CompanyProfileRepository {
     private final CompanyProfilePersistenceRepository jpa;
-    private final ApplicationEventPublisher events;
-    public CompanyProfileRepositoryImpl(CompanyProfilePersistenceRepository jpa,ApplicationEventPublisher events){
+    private final DomainEventPublisher events;
+    public CompanyProfileRepositoryImpl(CompanyProfilePersistenceRepository jpa,DomainEventPublisher events){
         this.jpa=jpa;this.events=events;
     }
     @Override public CompanyProfile save(CompanyProfile profile){
@@ -20,9 +20,7 @@ public class CompanyProfileRepositoryImpl implements CompanyProfileRepository {
             .orElseThrow(()->new IllegalStateException("Profile no longer exists"));
         var stored=jpa.saveAndFlush(CompanyProfilePersistenceAssembler.toPersistence(profile,current));
         if(isNew){profile.assignId(stored.getId());profile.onCreated();}
-        var emitted=List.copyOf(profile.domainEvents());
-        for(var event:emitted)events.publishEvent(event);
-        profile.clearDomainEvents();
+        events.publishAndClearEvents(profile);
         return CompanyProfilePersistenceAssembler.toDomain(stored);
     }
     @Override public Optional<CompanyProfile> findById(Long id){
