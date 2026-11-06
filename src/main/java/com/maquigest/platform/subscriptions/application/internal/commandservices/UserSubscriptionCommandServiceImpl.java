@@ -61,4 +61,37 @@ public class UserSubscriptionCommandServiceImpl implements UserSubscriptionComma
         }
         return Result.success(subscriptions.save(subscription));
     }
+
+    @Override @Transactional
+    public Result<UserSubscription, ApplicationError> handle(ChangeUserSubscriptionPlanCommand command) {
+        if (command == null || command.subscriptionId() == null || command.subscriptionId() <= 0 ||
+            command.newPlanId() == null || command.newPlanId() <= 0 ||
+            command.actorUserId() == null || command.actorUserId() <= 0)
+            return Result.failure(ApplicationError.validationError("subscription", "Valid subscription, plan and actor ids are required"));
+
+        // This IAM lock also serializes create/cancel/change operations for the same company.
+        if (!iam.lockActiveRentalCompany(command.actorUserId()))
+            return Result.failure(ApplicationError.businessRuleViolation("Subscriber eligibility", "Only active rental companies can change plans"));
+
+        var maybe = subscriptions.findById(command.subscriptionId());
+        if (maybe.isEmpty())
+            return Result.failure(ApplicationError.notFound("UserSubscription", command.subscriptionId().toString()));
+        var subscription = maybe.get();
+        if (!subscription.getUserId().equals(command.actorUserId()))
+            return Result.failure(ApplicationError.businessRuleViolation("Subscriber ownership", "Cannot change another company's subscription"));
+
+        var maybePlan = plans.findById(command.newPlanId());
+        if (maybePlan.isEmpty())
+            return Result.failure(ApplicationError.notFound("SubscriptionPlan", command.newPlanId().toString()));
+        if (!maybePlan.get().isActive())
+            return Result.failure(ApplicationError.businessRuleViolation("Subscription plan", "The selected plan is inactive"));
+        if (!"MONTHLY".equalsIgnoreCase(maybePlan.get().getBillingCycle()))
+            return Result.failure(ApplicationError.businessRuleViolation("Billing cycle", "Unsupported plan billing cycle"));
+        try {
+            subscription.changePlan(command.newPlanId());
+        } catch (IllegalStateException | IllegalArgumentException ex) {
+            return Result.failure(ApplicationError.conflict("UserSubscription", ex.getMessage()));
+        }
+        return Result.success(subscriptions.save(subscription));
+    }
 }
