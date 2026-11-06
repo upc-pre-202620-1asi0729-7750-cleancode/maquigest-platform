@@ -8,6 +8,7 @@ import com.maquigest.platform.subscriptions.domain.model.queries.GetAllUserSubsc
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionStatus;
 import com.maquigest.platform.subscriptions.infrastructure.acl.iam.SubscriptionOwnershipPolicy;
 import com.maquigest.platform.subscriptions.interfaces.rest.resources.CreateUserSubscriptionResource;
+import com.maquigest.platform.subscriptions.interfaces.rest.resources.UserSubscriptionResource;
 import com.maquigest.platform.subscriptions.interfaces.rest.transform.UserSubscriptionResourceFromEntityAssembler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -55,6 +56,26 @@ public class UserSubscriptionController {
                 resource.startDate(), resource.endDate(), resource.autoRenew())),
             UserSubscriptionResourceFromEntityAssembler::toResourceFromEntity,HttpStatus.CREATED);
     }
+    /** Angular sends the existing subscription representation; only planId is mutable here. */
+    @PutMapping(value="/{id}",consumes=APPLICATION_JSON_VALUE)
+    @Operation(summary="Change the authenticated rental company's active subscription plan")
+    public ResponseEntity<?> changePlan(@PathVariable Long id, @RequestBody UserSubscriptionResource resource,
+                                         Authentication authentication) {
+        var actor = ownership.authenticatedOwnerId(authentication);
+        if (actor.isEmpty()) return forbidden();
+        if (resource == null || resource.planId() == null || resource.planId() <= 0)
+            return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                ApplicationError.validationError("planId", "A positive planId is required"));
+        if (resource.id() != null && !id.equals(resource.id()))
+            return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                ApplicationError.validationError("subscriptionId", "Request id must match the path id"));
+        if (resource.userId() != null && !actor.get().equals(resource.userId()))
+            return forbidden();
+        return ResponseEntityAssembler.toResponseEntityFromResult(
+            commands.handle(new ChangeUserSubscriptionPlanCommand(id,resource.planId(),actor.get())),
+            UserSubscriptionResourceFromEntityAssembler::toResourceFromEntity,HttpStatus.OK);
+    }
+
     @PatchMapping("/{id}/cancel")
     @Operation(summary="Cancel a subscription belonging to the authenticated rental company")
     public ResponseEntity<?> cancel(@PathVariable Long id, Authentication authentication) {

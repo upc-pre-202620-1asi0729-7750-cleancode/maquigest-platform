@@ -31,6 +31,8 @@ public class UserSubscriptionRepositoryImpl implements UserSubscriptionRepositor
             var existing = jpa.findById(domain.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Subscription no longer exists"));
             existing.setStatus(domain.getStatus());
+            // Persist new entitlement on plan changes; the previous implementation saved status only.
+            existing.setPlanId(domain.getPlanId());
             var saved = jpa.saveAndFlush(existing);
             publisher.publishAndClearEvents(domain);
             return UserSubscriptionPersistenceAssembler.toDomain(saved);
