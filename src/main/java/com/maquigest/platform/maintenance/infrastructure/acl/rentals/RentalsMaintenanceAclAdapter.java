@@ -20,6 +20,12 @@ public class RentalsMaintenanceAclAdapter implements MaintenanceRentalPort {
     }
 
     @Override
+    public java.util.Optional<LatestReturn> latestReturn(Long equipmentId, Long ownerUserId) {
+        return rentals.latestReturn(equipmentId, ownerUserId)
+            .map(item -> new LatestReturn(item.returnedAt(), item.maintenanceRequired()));
+    }
+
+    @Override
     public List<RentalHistory> history(Long equipmentId, Long ownerUserId) {
         return rentals.history(equipmentId, ownerUserId).stream()
             .map(item -> new RentalHistory(item.id(), item.occurredAt(), item.description(), item.status()))

@@ -12,11 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class IncidentTransactionalExecutor {
     private final IncidentRepository incidents;
     private final MaintenanceRepository maintenances;
+    private final MaintenanceActivityRepository activities;
     private final MaintenanceInventoryPort inventory;
     private final MaintenanceRentalPort rentals;
     public IncidentTransactionalExecutor(IncidentRepository incidents,MaintenanceRepository maintenances,
-                                      MaintenanceInventoryPort inventory,MaintenanceRentalPort rentals){
-        this.incidents=incidents;this.maintenances=maintenances;this.inventory=inventory;this.rentals=rentals;
+                                      MaintenanceActivityRepository activities, MaintenanceInventoryPort inventory,
+                                      MaintenanceRentalPort rentals){
+        this.incidents=incidents;this.maintenances=maintenances;this.activities=activities;
+        this.inventory=inventory;this.rentals=rentals;
     }
     private MaintenanceInventoryPort.EquipmentFacts ownedAndLocked(Long equipmentId,Long actor){
         if(equipmentId==null||equipmentId<=0||actor==null||actor<=0)throw MaintenanceException.invalid("Invalid equipment or actor");
@@ -60,7 +63,22 @@ public class IncidentTransactionalExecutor {
         if(command==null||!command.inspectionConfirmed())throw MaintenanceException.invalid("Technical inspection confirmation is required");
         var facts=ownedAndLocked(command.equipmentId(),actor);
         if(!"MAINTENANCE".equals(facts.status()))throw MaintenanceException.conflict("Only MAINTENANCE equipment can be reactivated");
-        if(!incidents.hadBlocking(facts.id()))throw MaintenanceException.conflict("Blocking incident history is required");
+        // Preserve the original resolved-blocking-incident path.
+        // A return with maintenance required is an additional, independently verified path.
+        if(!incidents.hadBlocking(facts.id())) {
+            var latestReturn=rentals.latestReturn(facts.id(),actor);
+            if(latestReturn.isEmpty() || !latestReturn.get().maintenanceRequired())
+                throw MaintenanceException.conflict("Blocking incident history or maintenance-required return is required");
+            var completed=maintenances.findByEquipmentId(facts.id()).stream()
+                .filter(m->m.getOwnerUserId().equals(actor) && m.getStatus()==MaintenanceStatus.COMPLETED)
+                .anyMatch(m->activities.findByMaintenanceId(m.getId()).stream().anyMatch(activity->
+                    activity.status()==MaintenanceStatus.COMPLETED &&
+                    !activity.occurredAt().isBefore(latestReturn.get().returnedAt())));
+            if(!completed)throw MaintenanceException.conflict("A completed intervention after the maintenance-required return is required");
+            if(maintenances.findByEquipmentId(facts.id()).stream().anyMatch(m->
+                m.getStatus()==MaintenanceStatus.SCHEDULED))
+                throw MaintenanceException.conflict("Scheduled maintenance must be completed before reactivation");
+        }
         if(incidents.hasOpenBlocking(facts.id()))throw MaintenanceException.conflict("Open blocking incident prevents reactivation");
         if(rentals.hasActiveRental(facts.id(),actor))throw MaintenanceException.conflict("Active rental prevents reactivation");
         if(maintenances.findByEquipmentId(facts.id()).stream().anyMatch(m->m.getStatus()==MaintenanceStatus.IN_PROGRESS))
