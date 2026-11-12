@@ -35,6 +35,18 @@ public class RentalsMaintenanceFacadeImpl implements RentalsMaintenanceFacade {
             .anyMatch(r -> r.getEquipmentId().equals(equipmentId) && r.getStatus() == RentalStatus.ACTIVE);
     }
 
+    /** Read-only Rentals projection: last actual return, not an inferred equipment state. */
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Optional<LatestReturn> latestReturn(Long equipmentId, Long ownerUserId) {
+        return rentals.findVisibleTo(ownerUserId).stream()
+            .filter(r -> r.getEquipmentId().equals(equipmentId) && r.getStatus() == RentalStatus.COMPLETED)
+            .map(r -> returns.findByRentalId(r.getId())
+                .map(item -> new LatestReturn(item.returnedAt(), item.maintenanceRequired())))
+            .flatMap(java.util.Optional::stream)
+            .max(java.util.Comparator.comparing(LatestReturn::returnedAt));
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<RentalHistory> history(Long equipmentId, Long ownerUserId) {
