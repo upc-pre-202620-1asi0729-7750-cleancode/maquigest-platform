@@ -32,8 +32,8 @@ public class OpenApiConfiguration {
                 .description(applicationDescription)
                 .version(applicationVersion));
         openApi.servers(List.of(new Server()
-                .url("http://localhost:8080")
-                .description("Local Development Environment")));
+                .url("/")
+                .description("Servidor actual de MaquiGest API")));
         // Define the scheme globally without requiring bearer for public sign-up/sign-in.
         // Protected operations declare @SecurityRequirement(name = "bearerAuth").
         openApi.components(new Components().addSecuritySchemes(securitySchemeName,
