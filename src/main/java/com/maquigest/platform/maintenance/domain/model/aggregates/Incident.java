@@ -4,6 +4,7 @@ import com.maquigest.platform.maintenance.domain.model.valueobjects.IncidentStat
 import com.maquigest.platform.maintenance.domain.model.events.*;
 import java.time.Instant;
 import java.util.Objects;
+import com.maquigest.platform.maintenance.domain.model.valueobjects.NotificationType;
 public final class Incident extends AbstractDomainAggregateRoot<Incident> {
     private final Long id, equipmentId, ownerUserId;
     private final String description;
@@ -47,4 +48,13 @@ public final class Incident extends AbstractDomainAggregateRoot<Incident> {
     public Long getOwnerUserId(){return ownerUserId;} public String getDescription(){return description;}
     public Instant getReportedAt(){return reportedAt;} public boolean isBlocksRental(){return blocksRental;}
     public IncidentStatus getStatus(){return status;} public Instant getResolvedAt(){return resolvedAt;}
+    /** Register a local notification fact after persistence assigns the identity. */
+    public void onNotificationPersisted(Long persistedId) {
+        if (persistedId == null || persistedId < 1 || (id != null && !id.equals(persistedId)))
+            throw new IllegalArgumentException("Invalid persisted aggregate id");
+        if (domainEvents().stream().anyMatch(IncidentReportedEvent.class::isInstance))
+            registerDomainEvent(new MaintenanceNotificationRequestedEvent(persistedId, ownerUserId, NotificationType.INCIDENT_REPORTED));
+        if (domainEvents().stream().anyMatch(IncidentResolvedEvent.class::isInstance))
+            registerDomainEvent(new MaintenanceNotificationRequestedEvent(persistedId, ownerUserId, NotificationType.INCIDENT_RESOLVED));
+    }
 }

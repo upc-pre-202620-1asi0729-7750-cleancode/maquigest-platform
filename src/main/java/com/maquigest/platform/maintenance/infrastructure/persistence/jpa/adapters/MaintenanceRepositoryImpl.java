@@ -18,7 +18,9 @@ public class MaintenanceRepositoryImpl implements MaintenanceRepository {
         var entity=maintenance.getId()==null?MaintenancePersistenceAssembler.toNew(maintenance):jpa.findById(maintenance.getId())
             .orElseThrow(()->new IllegalArgumentException("Maintenance not found"));
         if(maintenance.getId()!=null)MaintenancePersistenceAssembler.copy(maintenance,entity);
-        var saved=jpa.saveAndFlush(entity);events.publishAndClearEvents(maintenance);
+        var saved=jpa.saveAndFlush(entity);
+        maintenance.onNotificationPersisted(saved.getId());
+        events.publishAndClearEvents(maintenance);
         return MaintenancePersistenceAssembler.toDomain(saved);
     }
 }
