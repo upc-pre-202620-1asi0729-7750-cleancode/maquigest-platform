@@ -6,6 +6,8 @@ import com.maquigest.platform.inventory.domain.model.entities.AvailabilityBlock;
 import com.maquigest.platform.inventory.domain.model.valueobjects.EquipmentStatus;
 import com.maquigest.platform.inventory.domain.model.valueobjects.RentalRate;
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
+import com.maquigest.platform.inventory.domain.model.events.EquipmentCreatedEvent;
+import com.maquigest.platform.inventory.domain.model.events.EquipmentStatusChangedEvent;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -124,6 +126,11 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
         };
         if (!allowed) throw new IllegalStateException("Equipment operational status transition is not allowed");
         this.status = nextStatus;
+        if (id != null) registerDomainEvent(new EquipmentStatusChangedEvent(id, userId));
+    }
+    public void onCreated() {
+        if (id == null) throw new IllegalStateException("Persist equipment before publishing creation");
+        registerDomainEvent(new EquipmentCreatedEvent(id, userId));
     }
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
