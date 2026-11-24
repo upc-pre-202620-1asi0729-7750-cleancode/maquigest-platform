@@ -10,6 +10,7 @@ import com.maquigest.platform.rentals.infrastructure.persistence.jpa.entities.No
 import com.maquigest.platform.rentals.infrastructure.persistence.jpa.repositories.NotificationPersistenceRepository;
 import com.maquigest.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
+import java.util.List;
 import java.util.Optional;
 
 @Repository("rentalNotificationRepositoryImpl")
@@ -32,6 +33,22 @@ public class NotificationRepositoryImpl implements NotificationRepository {
             NotificationReferenceId referenceId, NotificationType type) {
         return jpa.findByRecipientIdAndReferenceIdAndType(recipientId, referenceId, type)
                 .map(NotificationPersistenceAssembler::toDomain);
+    }
+
+    @Override
+    public List<Notification> findAllByRecipientId(NotificationRecipientId recipientId) {
+        return jpa.findAllByRecipientIdOrderByOccurredAtDescIdDesc(recipientId).stream()
+                .map(NotificationPersistenceAssembler::toDomain).toList();
+    }
+
+    @Override
+    public Optional<Notification> findByIdAndRecipientId(Long id, NotificationRecipientId recipientId) {
+        return jpa.findByIdAndRecipientId(id, recipientId).map(NotificationPersistenceAssembler::toDomain);
+    }
+
+    @Override
+    public Optional<Notification> findByIdAndRecipientIdForUpdate(Long id, NotificationRecipientId recipientId) {
+        return jpa.findLockedByIdAndRecipientId(id, recipientId).map(NotificationPersistenceAssembler::toDomain);
     }
 
     @Override
