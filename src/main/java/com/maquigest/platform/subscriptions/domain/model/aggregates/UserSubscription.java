@@ -3,6 +3,8 @@ package com.maquigest.platform.subscriptions.domain.model.aggregates;
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionStatus;
 import java.time.Instant;
+import com.maquigest.platform.subscriptions.domain.model.events.*;
+import com.maquigest.platform.subscriptions.domain.model.valueobjects.NotificationType;
 import java.util.Objects;
 
 /** Subscription aggregate. Only subscription IDs are stored; IAM/Inventory entities are not embedded. */
@@ -61,4 +63,13 @@ public final class UserSubscription extends AbstractDomainAggregateRoot<UserSubs
     public Instant getEndDate() { return period.endDate(); }
     public SubscriptionStatus getStatus() { return status; }
     public boolean isAutoRenew() { return autoRenew; }
+    /** Register a notification only for a persisted subscription lifecycle fact. */
+    public void onNotificationPersisted(Long persistedId) {
+        if (persistedId == null || persistedId < 1 || (id != null && !id.equals(persistedId)))
+            throw new IllegalArgumentException("Invalid persisted subscription id");
+        if (status == SubscriptionStatus.ACTIVE && domainEvents().stream().anyMatch(UserSubscriptionActivatedEvent.class::isInstance))
+            registerDomainEvent(new SubscriptionsNotificationRequestedEvent(persistedId, userId, NotificationType.SUBSCRIPTION_ACTIVATED));
+        if (domainEvents().stream().anyMatch(UserSubscriptionCancelledEvent.class::isInstance))
+            registerDomainEvent(new SubscriptionsNotificationRequestedEvent(persistedId, userId, NotificationType.SUBSCRIPTION_CANCELLED));
+    }
 }
