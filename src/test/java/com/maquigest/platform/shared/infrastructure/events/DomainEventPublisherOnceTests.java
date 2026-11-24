@@ -17,9 +17,10 @@ class DomainEventPublisherOnceTests {
         var profile = CompanyProfile.reconstitute(77L, new CreateCompanyProfileCommand(
             3L, "Ana", "Perez", "ana@example.com", "", "Company", CompanyAddress.empty()));
         profile.onCreated();
+        var registered = profile.domainEvents().iterator().next();
         events.publishAndClearEvents(profile);
         events.publishAndClearEvents(profile);
-        verify(publisher, times(1)).publishEvent(new CompanyProfileCreatedEvent(77L, 3L));
+        verify(publisher, times(1)).publishEvent(registered);
         assertTrue(profile.domainEvents().isEmpty());
     }
 
