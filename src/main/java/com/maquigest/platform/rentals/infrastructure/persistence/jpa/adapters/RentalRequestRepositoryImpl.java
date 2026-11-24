@@ -66,7 +66,13 @@ public class RentalRequestRepositoryImpl implements RentalRequestRepository {
         entity.setStartDate(request.getPeriod().startDate());
         entity.setEndDate(request.getPeriod().endDate());
         var saved = jpa.saveAndFlush(entity);
-        publisher.publishAndClearEvents(request);
-        return RentalRequestPersistenceAssembler.toDomain(saved);
+        var persisted = RentalRequestPersistenceAssembler.toDomain(saved);
+        if (request.getId() == null) {
+            persisted.onCreated();
+            publisher.publishAndClearEvents(persisted);
+        } else {
+            publisher.publishAndClearEvents(request);
+        }
+        return persisted;
     }
 }
