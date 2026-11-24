@@ -37,7 +37,7 @@ class NotificationCommandServiceTests {
     }
     @Test void nullCommandIsAnExpectedFailure() {
         var executor = mock(NotificationTransactionalExecutor.class);
-        assertTrue(new NotificationCommandServiceImpl(executor).handle(null).isFailure());
+        assertTrue(new NotificationCommandServiceImpl(executor).handle((CreateNotificationCommand) null).isFailure());
         verifyNoInteractions(executor);
     }
 }
