@@ -4,6 +4,8 @@ import com.maquigest.platform.iam.domain.model.entities.Role;
 import com.maquigest.platform.iam.domain.model.valueobjects.UserStatus;
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
+import com.maquigest.platform.iam.domain.model.events.IamNotificationRequestedEvent;
+import com.maquigest.platform.iam.domain.model.valueobjects.NotificationType;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -50,6 +52,12 @@ public class User extends AbstractDomainAggregateRoot<User> {
         user.roles = new HashSet<>(roles);
         user.status = status == null ? UserStatus.ACTIVE : status;
         return user;
+    }
+
+    /** Registers the account creation fact only after its persistence identity is assigned. */
+    public void onRegistered() {
+        if (id == null || id < 1) throw new IllegalStateException("Registration requires a persisted user id");
+        registerDomainEvent(new IamNotificationRequestedEvent(id, id, NotificationType.ACCOUNT_REGISTERED));
     }
 
     public User addRole(Role role) {
