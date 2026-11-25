@@ -53,10 +53,16 @@ public class NotificationRepositoryImpl implements NotificationRepository {
 
     @Override
     public Notification save(Notification notification) {
-        var entity = notification.getId() == null ? new NotificationPersistenceEntity()
+        var isNew = notification.getId() == null;
+        var entity = isNew ? new NotificationPersistenceEntity()
                 : jpa.findById(notification.getId()).orElseThrow();
         var saved = jpa.saveAndFlush(NotificationPersistenceAssembler.toPersistence(notification, entity));
         publisher.publishAndClearEvents(notification);
-        return NotificationPersistenceAssembler.toDomain(saved);
+        var result = NotificationPersistenceAssembler.toDomain(saved);
+        if (isNew) {
+            result.onCreated();
+            publisher.publishAndClearEvents(result);
+        }
+        return result;
     }
 }

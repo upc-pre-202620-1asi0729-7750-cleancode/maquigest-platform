@@ -6,6 +6,7 @@ import com.maquigest.platform.rentals.domain.model.valueobjects.NotificationReci
 import com.maquigest.platform.rentals.domain.model.valueobjects.NotificationReferenceId;
 import com.maquigest.platform.rentals.domain.model.valueobjects.NotificationType;
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
+import com.maquigest.platform.rentals.domain.model.events.RentalNotificationEmailRequestedEvent;
 import lombok.Getter;
 import java.time.Instant;
 
@@ -53,6 +54,14 @@ public final class Notification extends AbstractDomainAggregateRoot<Notification
             NotificationEmailStatus emailStatus, Instant readAt) {
         if (id == null) throw new IllegalArgumentException("validation.notification.required");
         return new Notification(id, recipientId, referenceId, type, occurredAt, emailStatus, readAt);
+    }
+
+    /** Called only for a newly persisted notification, after identity assignment. */
+    public void onCreated() {
+        if (id == null) throw new IllegalStateException("Notification identity required");
+        if (emailStatus == NotificationEmailStatus.PENDING) {
+            registerDomainEvent(new RentalNotificationEmailRequestedEvent(id, recipientId));
+        }
     }
 
     public boolean isRead() { return readAt != null; }
