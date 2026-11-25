@@ -15,12 +15,17 @@ public class UserSubscriptionCommandServiceImpl implements UserSubscriptionComma
     private final UserSubscriptionRepository subscriptions;
     private final SubscriptionPlanRepository plans;
     private final IamSubscriberPort iam;
+    @org.springframework.beans.factory.annotation.Value("${maquigest.stripe.required:false}")
+    private boolean stripeRequired;
+    @org.springframework.beans.factory.annotation.Value("${maquigest.stripe.enabled:false}")
+    private boolean stripeEnabled;
     public UserSubscriptionCommandServiceImpl(UserSubscriptionRepository subscriptions,
             SubscriptionPlanRepository plans, IamSubscriberPort iam) {
         this.subscriptions = subscriptions; this.plans = plans; this.iam = iam;
     }
     @Override @Transactional
     public Result<UserSubscription, ApplicationError> handle(CreateUserSubscriptionCommand command) {
+        if (stripeRequired || stripeEnabled) return Result.failure(ApplicationError.businessRuleViolation("Stripe checkout", "Payment confirmation is required"));
         if (command == null || command.userId() == null || command.userId() <= 0 ||
             command.planId() == null || command.planId() <= 0 || command.startDate() == null ||
             command.endDate() == null || !command.endDate().isAfter(command.startDate()))
@@ -64,6 +69,7 @@ public class UserSubscriptionCommandServiceImpl implements UserSubscriptionComma
 
     @Override @Transactional
     public Result<UserSubscription, ApplicationError> handle(ChangeUserSubscriptionPlanCommand command) {
+        if (stripeRequired || stripeEnabled) return Result.failure(ApplicationError.businessRuleViolation("Stripe checkout", "Plan changes require a new paid period after expiry"));
         if (command == null || command.subscriptionId() == null || command.subscriptionId() <= 0 ||
             command.newPlanId() == null || command.newPlanId() <= 0 ||
             command.actorUserId() == null || command.actorUserId() <= 0)
