@@ -5,6 +5,7 @@ import com.maquigest.platform.inventory.domain.model.commands.UpdateEquipmentCom
 import com.maquigest.platform.inventory.domain.model.entities.AvailabilityBlock;
 import com.maquigest.platform.inventory.domain.model.valueobjects.EquipmentStatus;
 import com.maquigest.platform.inventory.domain.model.valueobjects.RentalRate;
+import com.maquigest.platform.inventory.domain.model.valueobjects.UserId;
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import com.maquigest.platform.inventory.domain.model.events.EquipmentCreatedEvent;
 import com.maquigest.platform.inventory.domain.model.events.EquipmentStatusChangedEvent;
@@ -16,7 +17,7 @@ import java.util.List;
 /** Consistency boundary for equipment information, operational status and calendar blocks. */
 public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
     private Long id;
-    private final Long userId;
+    private final UserId userId;
     private String code;
     private String name;
     private String description;
@@ -28,7 +29,7 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
 
     public Equipment(CreateEquipmentCommand command) {
         if (command == null) throw new IllegalArgumentException("CreateEquipmentCommand is required");
-        this.userId = positive(command.userId(), "userId");
+        this.userId = new UserId(command.userId());
         updateFields(command.code(), command.name(), command.description(), command.categoryId(),
             command.location(), new RentalRate(command.dailyRate(), command.weeklyRate()));
         this.status = EquipmentStatus.AVAILABLE;
@@ -126,14 +127,14 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
         };
         if (!allowed) throw new IllegalStateException("Equipment operational status transition is not allowed");
         this.status = nextStatus;
-        if (id != null) registerDomainEvent(new EquipmentStatusChangedEvent(id, userId));
+        if (id != null) registerDomainEvent(new EquipmentStatusChangedEvent(id, userId.value()));
     }
     public void onCreated() {
         if (id == null) throw new IllegalStateException("Persist equipment before publishing creation");
-        registerDomainEvent(new EquipmentCreatedEvent(id, userId));
+        registerDomainEvent(new EquipmentCreatedEvent(id, userId.value()));
     }
     public Long getId() { return id; }
-    public Long getUserId() { return userId; }
+    public Long getUserId() { return userId.value(); }
     public String getCode() { return code; }
     public String getName() { return name; }
     public String getDescription() { return description; }

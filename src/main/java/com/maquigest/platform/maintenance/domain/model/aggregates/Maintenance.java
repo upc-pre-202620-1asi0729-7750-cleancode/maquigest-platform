@@ -5,7 +5,9 @@ import com.maquigest.platform.maintenance.domain.model.events.*;
 import java.time.*;
 import java.util.Objects;
 public final class Maintenance extends AbstractDomainAggregateRoot<Maintenance> {
-    private final Long id,equipmentId,ownerUserId;
+    private final Long id;
+    private final EquipmentId equipmentId;
+    private final OwnerUserId ownerUserId;
     private final String type;
     private final Instant performedAt;
     private MaintenanceStatus status;
@@ -15,7 +17,7 @@ public final class Maintenance extends AbstractDomainAggregateRoot<Maintenance> 
                        MaintenanceStatus status,String technician,Instant acknowledgedAt) {
         if(id!=null&&id<=0)throw new IllegalArgumentException("Invalid maintenance id");
         if(equipmentId==null||equipmentId<=0||ownerUserId==null||ownerUserId<=0)throw new IllegalArgumentException("Invalid equipment or owner");
-        this.id=id;this.equipmentId=equipmentId;this.ownerUserId=ownerUserId;
+        this.id=id;this.equipmentId=new EquipmentId(equipmentId);this.ownerUserId=new OwnerUserId(ownerUserId);
         this.performedAt=Objects.requireNonNull(performedAt,"performedAt");
         this.type=new MaintenanceType(type).value();this.status=Objects.requireNonNull(status,"status");
         this.technician=technician==null?"":technician.trim();this.acknowledgedAt=acknowledgedAt;
@@ -51,7 +53,7 @@ public final class Maintenance extends AbstractDomainAggregateRoot<Maintenance> 
             if(assigned.trim().length()>180)throw new IllegalArgumentException("Technician name too long");
             technician=assigned.trim();
         }
-        status=target;registerDomainEvent(new MaintenanceStatusChangedEvent(id,equipmentId,status.name()));
+        status=target;registerDomainEvent(new MaintenanceStatusChangedEvent(id,equipmentId.value(),status.name()));
     }
     public void assign(String name){
         if(name==null||name.isBlank()||name.trim().length()>180)throw new IllegalArgumentException("Invalid technician");
@@ -62,8 +64,8 @@ public final class Maintenance extends AbstractDomainAggregateRoot<Maintenance> 
         if(acknowledgedAt!=null)throw new IllegalStateException("Already acknowledged");
         acknowledgedAt=Objects.requireNonNull(at);
     }
-    public Long getId(){return id;} public Long getEquipmentId(){return equipmentId;}
-    public Long getOwnerUserId(){return ownerUserId;} public Instant getPerformedAt(){return performedAt;}
+    public Long getId(){return id;} public Long getEquipmentId(){return equipmentId.value();}
+    public Long getOwnerUserId(){return ownerUserId.value();} public Instant getPerformedAt(){return performedAt;}
     public String getType(){return type;} public MaintenanceStatus getStatus(){return status;}
     public String getTechnician(){return technician;} public Instant getAcknowledgedAt(){return acknowledgedAt;}
     /** Register a local notification fact after persistence assigns the identity. */
@@ -73,8 +75,8 @@ public final class Maintenance extends AbstractDomainAggregateRoot<Maintenance> 
         boolean created = domainEvents().stream().anyMatch(MaintenanceCreatedEvent.class::isInstance);
         boolean changed = domainEvents().stream().anyMatch(MaintenanceStatusChangedEvent.class::isInstance);
         if (created && status == MaintenanceStatus.SCHEDULED)
-            registerDomainEvent(new MaintenanceNotificationRequestedEvent(persistedId, ownerUserId, NotificationType.MAINTENANCE_SCHEDULED));
+            registerDomainEvent(new MaintenanceNotificationRequestedEvent(persistedId, ownerUserId.value(), NotificationType.MAINTENANCE_SCHEDULED));
         if ((created || changed) && status == MaintenanceStatus.COMPLETED)
-            registerDomainEvent(new MaintenanceNotificationRequestedEvent(persistedId, ownerUserId, NotificationType.MAINTENANCE_COMPLETED));
+            registerDomainEvent(new MaintenanceNotificationRequestedEvent(persistedId, ownerUserId.value(), NotificationType.MAINTENANCE_COMPLETED));
     }
 }
