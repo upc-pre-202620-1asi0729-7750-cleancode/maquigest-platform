@@ -54,6 +54,8 @@ public class EquipmentController {
     @Operation(summary="Get equipment by id")
     @ApiResponse(responseCode="404", description="Equipment does not exist")
     public ResponseEntity<?> getById(@PathVariable Long id) {
+        if (id == null || id <= 0) return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+            ApplicationError.notFound("Equipment", String.valueOf(id)));
         Result<Equipment,ApplicationError> result = queries.handle(new GetEquipmentByIdQuery(id))
             .<Result<Equipment,ApplicationError>>map(Result::success)
             .orElseGet(() -> Result.failure(ApplicationError.notFound("Equipment",String.valueOf(id))));

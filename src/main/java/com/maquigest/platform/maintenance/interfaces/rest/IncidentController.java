@@ -37,6 +37,7 @@ public class IncidentController {
     }
     @GetMapping("/{id}") @Operation(summary="Read an owned incident")
     public IncidentResource one(@PathVariable Long id,Authentication auth){var actor=policy.requireOwner(auth);
+        if (id == null || id <= 0) throw MaintenanceException.notFound("Incident");
         return queries.handle(new GetIncidentByIdQuery(id,actor.userId())).map(MaintenanceResourceAssembler::from)
             .orElseThrow(()->MaintenanceException.notFound("Incident"));}
     @PostMapping(consumes=APPLICATION_JSON_VALUE) @Operation(summary="Report incident; blocking incidents atomically mark Inventory as MAINTENANCE")

@@ -34,6 +34,7 @@ public class MaintenanceController {
     }
     @GetMapping("/{id}")
     public MaintenanceResource one(@PathVariable Long id,Authentication auth){var actor=policy.requireOwner(auth);
+        if (id == null || id <= 0) throw MaintenanceException.notFound("Maintenance");
         return queries.handle(new GetMaintenanceByIdQuery(id,actor.userId())).map(MaintenanceResourceAssembler::from)
             .orElseThrow(()->MaintenanceException.notFound("Maintenance"));}
     @PostMapping(consumes=APPLICATION_JSON_VALUE) @Operation(summary="Register completed maintenance or schedule a new one (Growth plan)")
@@ -55,6 +56,7 @@ public class MaintenanceController {
     }
     @GetMapping("/{id}/activities") @Operation(summary="Read maintenance tracking history")
     public List<MaintenanceActivityResource> activities(@PathVariable Long id,Authentication auth){var actor=policy.requireOwner(auth);
+        if (id == null || id <= 0) throw MaintenanceException.notFound("Maintenance");
         return queries.handle(new GetMaintenanceActivitiesQuery(id,actor.userId())).stream().map(MaintenanceResourceAssembler::from).toList();}
     @GetMapping("/equipment/{equipmentId}/history") @Operation(summary="Read merged rental, incident and maintenance timeline (owner only)")
     public EquipmentHistoryResource history(@PathVariable Long equipmentId,Authentication auth){var actor=policy.requireOwner(auth);

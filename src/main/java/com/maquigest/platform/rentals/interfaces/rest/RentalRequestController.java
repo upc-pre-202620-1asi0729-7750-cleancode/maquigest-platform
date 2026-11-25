@@ -52,6 +52,7 @@ public class RentalRequestController {
     @Operation(summary="Read one rental request if participant")
     public RentalRequestResource one(@PathVariable Long id, Authentication auth) {
         var actor = current(auth);
+        if (id == null || id <= 0) throw RentalsException.notFound("RentalRequest");
         return queries.handle(new GetRentalRequestByIdQuery(id, actor.userId()))
             .map(RentalResourceAssembler::from)
             .orElseThrow(() -> RentalsException.notFound("RentalRequest"));
@@ -89,6 +90,7 @@ public class RentalRequestController {
         var actor = current(auth);
         if (!actor.rentalCompany()) throw RentalsException.forbidden();
         if (body == null || body.status() == null) throw RentalsException.invalid("Request status is required");
+        if (id == null || id <= 0) throw RentalsException.notFound("RentalRequest");
         var original = queries.handle(new GetRentalRequestByIdQuery(id, actor.userId()))
             .orElseThrow(() -> RentalsException.notFound("RentalRequest"));
         if (!original.getRentalCompanyUserId().equals(actor.userId())) throw RentalsException.forbidden();

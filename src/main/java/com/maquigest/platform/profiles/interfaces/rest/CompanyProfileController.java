@@ -43,6 +43,8 @@ public class CompanyProfileController {
     @GetMapping("/{id}")
     @Operation(summary="Find a company profile by profile id")
     public ResponseEntity<?> byId(@PathVariable Long id){
+        if (id == null || id <= 0) return ProblemDetailFromApplicationErrorAssembler
+            .toResponseFromApplicationError(ApplicationError.notFound("Profile",String.valueOf(id)));
         var result=queries.handle(new GetCompanyProfileByIdQuery(id));
         if(result.isEmpty())return ProblemDetailFromApplicationErrorAssembler
             .toResponseFromApplicationError(ApplicationError.notFound("Profile",String.valueOf(id)));

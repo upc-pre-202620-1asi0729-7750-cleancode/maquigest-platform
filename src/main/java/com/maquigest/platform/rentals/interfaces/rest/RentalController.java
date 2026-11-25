@@ -27,7 +27,9 @@ public class RentalController {
     }
     @GetMapping("/{id}") @Operation(summary="Get one rental if participant")
     public RentalResource one(@PathVariable Long id,Authentication auth) {
-        return queries.handle(new GetRentalByIdQuery(id,actor(auth)))
+        var actorUserId = actor(auth);
+        if (id == null || id <= 0) throw RentalsException.notFound("Rental");
+        return queries.handle(new GetRentalByIdQuery(id,actorUserId))
             .map(RentalResourceAssembler::from).orElseThrow(()->RentalsException.notFound("Rental"));
     }
     // Retained for Angular endpoint compatibility. No client may create or set rental status directly.
