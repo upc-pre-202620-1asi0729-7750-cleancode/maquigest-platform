@@ -25,6 +25,13 @@ class GoogleGeocodingAdapterTests {
         assertEquals(-12.05, result.latitude()); assertEquals(-77.04, result.longitude());
         assertEquals("test-place", result.placeId()); assertEquals("Lima, Peru", result.formattedAddress()); server.verify();
     }
+    @Test void preservesUtf8FormattedAddress() {
+        server.expect(header("X-Goog-Api-Key", "fake-key")).andRespond(withSuccess("""
+            {"results":[{"formattedAddress":"Jr. Junín, Lima, Perú","placeId":"test-place","location":{"latitude":-12.05,"longitude":-77.04}}]}
+            """.getBytes(java.nio.charset.StandardCharsets.UTF_8), MediaType.APPLICATION_JSON));
+        assertEquals("Jr. Junín, Lima, Perú", adapter.locate("Junín, Perú", "es").formattedAddress());
+        server.verify();
+    }
     @Test void zeroResultsIsNotProviderFailure() {
         server.expect(header("X-Goog-Api-Key", "fake-key")).andRespond(withSuccess("{\"results\":[]}", MediaType.APPLICATION_JSON));
         assertEquals(NO_RESULTS, assertThrows(GeographicLookupException.class, () -> adapter.locate("missing", "en")).code()); server.verify();
