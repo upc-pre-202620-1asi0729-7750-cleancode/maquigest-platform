@@ -65,6 +65,16 @@ public class User extends AbstractDomainAggregateRoot<User> {
         this.password = requireNonBlank(encodedPassword, "password");
     }
 
+    public void requireEmailVerification() {
+        if (id != null || status != UserStatus.ACTIVE) throw new IllegalStateException("Only new accounts can require verification");
+        status = UserStatus.PENDING_EMAIL_VERIFICATION;
+    }
+
+    public void verifyEmail() {
+        if (status != UserStatus.PENDING_EMAIL_VERIFICATION) throw new IllegalStateException("Account is not pending verification");
+        status = UserStatus.ACTIVE;
+    }
+
     public User addRole(Role role) {
         if (role == null || role.getName() == null) {
             throw new IllegalArgumentException("role is required");
