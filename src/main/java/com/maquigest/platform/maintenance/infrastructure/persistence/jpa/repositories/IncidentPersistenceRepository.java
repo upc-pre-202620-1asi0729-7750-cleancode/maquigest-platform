@@ -5,7 +5,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import java.util.*;
-public interface IncidentJpaRepository extends JpaRepository<IncidentPersistenceEntity,Long> {
+public interface IncidentPersistenceRepository extends JpaRepository<IncidentPersistenceEntity,Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from IncidentPersistenceEntity i where i.id=:id")
     Optional<IncidentPersistenceEntity> findByIdForUpdate(@Param("id") Long id);

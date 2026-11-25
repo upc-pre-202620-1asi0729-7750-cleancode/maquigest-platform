@@ -10,7 +10,7 @@ import org.springframework.data.repository.query.Param;
  * Acquires an InnoDB row lock even if the pair did not exist before the request.
  * Requires the UNIQUE (equipment_id, construction_user_id) database constraint.
  */
-public interface RentalRequestSubmissionGuardJpaRepository
+public interface RentalRequestSubmissionGuardPersistenceRepository
         extends JpaRepository<RentalRequestSubmissionGuardPersistenceEntity, Long> {
 
     @Modifying

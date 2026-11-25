@@ -4,7 +4,7 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 import java.util.*;
-public interface RentalJpaRepository extends JpaRepository<RentalPersistenceEntity,Long> {
+public interface RentalPersistenceRepository extends JpaRepository<RentalPersistenceEntity,Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from RentalPersistenceEntity r where r.id=:id")

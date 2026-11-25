@@ -10,7 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface RentalRequestJpaRepository extends JpaRepository<RentalRequestPersistenceEntity,Long> {
+public interface RentalRequestPersistenceRepository extends JpaRepository<RentalRequestPersistenceEntity,Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from RentalRequestPersistenceEntity r where r.id=:id")
     Optional<RentalRequestPersistenceEntity> findByIdForUpdate(@Param("id") Long id);
