@@ -111,7 +111,7 @@ class CqrsHandleConventionTests {
         });
         when(stripe.retrieve(session.id())).thenReturn(session);
         when(transactions.find(session.reference())).thenReturn(checkout);
-        service.handle(new ProcessSubscriptionWebhookCommand(payload, "sig"));
+        assertTrue(service.handle(new ProcessSubscriptionWebhookCommand(payload, "sig")).isSuccess());
         var order = inOrder(stripe, transactions);
         order.verify(stripe).isEnabled();
         order.verify(stripe).verifyWebhook(any(byte[].class), eq("sig"));

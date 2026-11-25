@@ -18,7 +18,8 @@ public class CompanyProfilesReconciler {
     public void onReady(){reconcile();}
     @Scheduled(fixedDelayString="${maquigest.profiles.reconcile-interval-ms:60000}",initialDelayString="${maquigest.profiles.reconcile-initial-delay-ms:60000}")
     public void reconcile(){
-        int created=commands.handle(new ProvisionMissingCompanyProfilesCommand());
+        int created=commands.handle(new ProvisionMissingCompanyProfilesCommand()).toOptional()
+            .orElseThrow(()->new IllegalStateException("Company profile reconciliation failed"));
         if(created>0)log.info("Profiles provisioned for {} existing IAM company accounts",created);
     }
 }

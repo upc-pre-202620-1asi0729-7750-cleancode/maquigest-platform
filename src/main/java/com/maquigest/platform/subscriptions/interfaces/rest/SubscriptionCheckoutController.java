@@ -4,6 +4,7 @@ import com.maquigest.platform.subscriptions.domain.model.commands.*;
 import com.maquigest.platform.subscriptions.interfaces.rest.resources.CreateSubscriptionCheckoutResource;
 import com.maquigest.platform.subscriptions.interfaces.rest.security.SubscriptionOwnershipPolicy;
 import com.maquigest.platform.subscriptions.interfaces.rest.transform.SubscriptionCheckoutResourceAssembler;
+import com.maquigest.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
 import static com.maquigest.platform.subscriptions.application.commandservices.CheckoutFailure.Code.*;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -25,15 +26,18 @@ public class SubscriptionCheckoutController {
     private Long owner(Authentication auth){return ownership.authenticatedOwnerId(auth).orElseThrow(()->new CheckoutFailure(FORBIDDEN));}
     @PostMapping @SecurityRequirement(name="bearerAuth") @Operation(summary="Start or resume a Stripe test checkout")
     public ResponseEntity<?> create(@Valid @RequestBody CreateSubscriptionCheckoutResource resource,Authentication auth){
-        return ResponseEntity.ok(SubscriptionCheckoutResourceAssembler.toResource(commands.handle(new CreateSubscriptionCheckoutCommand(owner(auth),resource.planId()))));
+        return ResponseEntity.ok(SubscriptionCheckoutResourceAssembler.toResource(ResponseEntityAssembler.valueOrThrow(
+            commands.handle(new CreateSubscriptionCheckoutCommand(owner(auth),resource.planId())), CheckoutFailure::fromApplicationError)));
     }
     @PostMapping("/{reference}/confirm") @SecurityRequirement(name="bearerAuth") @Operation(summary="Reconcile payment with Stripe, not with browser claims")
     public ResponseEntity<?> confirm(@PathVariable String reference,Authentication auth){
-        return ResponseEntity.ok(SubscriptionCheckoutResourceAssembler.toResource(commands.handle(new RefreshSubscriptionCheckoutCommand(owner(auth),reference))));
+        return ResponseEntity.ok(SubscriptionCheckoutResourceAssembler.toResource(ResponseEntityAssembler.valueOrThrow(
+            commands.handle(new RefreshSubscriptionCheckoutCommand(owner(auth),reference)), CheckoutFailure::fromApplicationError)));
     }
     @PostMapping(value="/webhook",consumes=MediaType.APPLICATION_JSON_VALUE) @Operation(summary="Receive signed Stripe checkout events")
     public ResponseEntity<Void> webhook(@RequestBody byte[] payload,@RequestHeader(value="Stripe-Signature",required=false) String signature){
-        commands.handle(new ProcessSubscriptionWebhookCommand(payload,signature));return ResponseEntity.noContent().build();
+        ResponseEntityAssembler.valueOrThrow(commands.handle(new ProcessSubscriptionWebhookCommand(payload,signature)), CheckoutFailure::fromApplicationError);
+        return ResponseEntity.noContent().build();
     }
     @ExceptionHandler(CheckoutFailure.class) public ResponseEntity<ProblemDetail> error(CheckoutFailure e){
         var status=switch(e.code()){case UNAVAILABLE,PROVIDER->HttpStatus.SERVICE_UNAVAILABLE;case FORBIDDEN->HttpStatus.FORBIDDEN;case NOT_FOUND->HttpStatus.NOT_FOUND;case CONFLICT->HttpStatus.CONFLICT;case INVALID->HttpStatus.BAD_REQUEST;};

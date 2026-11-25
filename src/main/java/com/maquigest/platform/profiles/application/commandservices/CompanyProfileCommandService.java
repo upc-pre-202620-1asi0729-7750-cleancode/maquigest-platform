@@ -6,5 +6,5 @@ public interface CompanyProfileCommandService {
     Result<CompanyProfile,ApplicationError> handle(CreateCompanyProfileCommand command);
     Result<CompanyProfile,ApplicationError> handle(UpdateCompanyProfileCommand command);
     /** Reconcile existing IAM users without overwriting manually updated profiles. */
-    int handle(ProvisionMissingCompanyProfilesCommand command);
+    Result<Integer, ApplicationError> handle(ProvisionMissingCompanyProfilesCommand command);
 }

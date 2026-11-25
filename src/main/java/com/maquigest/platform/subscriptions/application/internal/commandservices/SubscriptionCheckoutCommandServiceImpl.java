@@ -6,6 +6,9 @@ import com.maquigest.platform.subscriptions.domain.model.aggregates.Subscription
 import com.maquigest.platform.subscriptions.domain.model.commands.*;
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.CheckoutStatus;
 import org.springframework.stereotype.Service;
+import com.maquigest.platform.shared.application.result.ApplicationError;
+import com.maquigest.platform.shared.application.result.Result;
+import java.util.function.Supplier;
 import java.time.Instant;
 @Service
 public class SubscriptionCheckoutCommandServiceImpl implements SubscriptionCheckoutCommandService {
@@ -14,7 +17,32 @@ public class SubscriptionCheckoutCommandServiceImpl implements SubscriptionCheck
     public SubscriptionCheckoutCommandServiceImpl(SubscriptionCheckoutTransactions tx,StripeCheckoutPort stripe) {this.tx=tx;this.stripe=stripe;}
     private void enabled() {if(!stripe.isEnabled()) throw new CheckoutFailure(UNAVAILABLE);}
     private CheckoutResult result(SubscriptionCheckout c,String url) {return new CheckoutResult(c.getReference(),c.getStatus(),url,c.getSubscriptionId());}
-    public CheckoutResult handle(CreateSubscriptionCheckoutCommand command) {
+    // Expected failures are converted only after the transactional collaborator exits.
+    // Unexpected exceptions retain their original propagation and rollback behavior.
+    private <T> Result<T, ApplicationError> execute(Supplier<T> operation) {
+        try { return Result.success(operation.get()); }
+        catch (CheckoutFailure failure) { return Result.failure(failure.toApplicationError()); }
+    }
+
+    @Override
+    public Result<CheckoutResult, ApplicationError> handle(CreateSubscriptionCheckoutCommand command) {
+        return execute(() -> create(command));
+    }
+
+    @Override
+    public Result<CheckoutResult, ApplicationError> handle(RefreshSubscriptionCheckoutCommand command) {
+        return execute(() -> refresh(command));
+    }
+
+    @Override
+    public Result<Boolean, ApplicationError> handle(ProcessSubscriptionWebhookCommand command) {
+        return execute(() -> {
+            processWebhook(command);
+            return true;
+        });
+    }
+
+    private CheckoutResult create(CreateSubscriptionCheckoutCommand command) {
         enabled();
         if (command==null || command.planId()==null || command.planId()<=0) throw new CheckoutFailure(INVALID);
         for (int i=0;i<2;i++) {
@@ -33,7 +61,7 @@ public class SubscriptionCheckoutCommandServiceImpl implements SubscriptionCheck
         }
         throw new CheckoutFailure(CONFLICT);
     }
-    public CheckoutResult handle(RefreshSubscriptionCheckoutCommand command) {
+    private CheckoutResult refresh(RefreshSubscriptionCheckoutCommand command) {
         enabled();
         if(command==null || command.reference()==null) throw new CheckoutFailure(INVALID);
         var c=tx.find(command.reference());
@@ -43,8 +71,7 @@ public class SubscriptionCheckoutCommandServiceImpl implements SubscriptionCheck
         if (!c.getReference().equals(session.reference())) throw new CheckoutFailure(INVALID);
         return result(tx.reconcile(c.getUserId(),session),null);
     }
-    @Override
-    public void handle(ProcessSubscriptionWebhookCommand command) {
+    private void processWebhook(ProcessSubscriptionWebhookCommand command) {
         enabled();
         stripe.verifyWebhook(command.payload(),command.signature()).ifPresent(id->{
             var session=stripe.retrieve(id);
