@@ -129,6 +129,24 @@ class PublishedRestApiRegressionTests {
     }
 
 
+    @Test void swaggerSeparatesRentalRequestInputsFromPublishedResponse() throws Exception {
+        var response = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
+        var path = "$.paths['/api/v1/rental-requests']";
+        var detail = "$.paths['/api/v1/rental-requests/{id}']";
+        var input = ".requestBody.content['application/json'].schema['$ref']";
+        response.andExpect(jsonPath(path + ".post" + input).value("#/components/schemas/CreateRentalRequestResource"));
+        response.andExpect(jsonPath(detail + ".put" + input).value("#/components/schemas/UpdateRentalRequestResource"));
+        response.andExpect(jsonPath(detail + ".get.responses['200'].content['application/json'].schema['$ref']")
+            .value("#/components/schemas/RentalRequestResource"));
+        for (String schema : new String[]{"CreateRentalRequestResource", "UpdateRentalRequestResource", "RentalRequestResource"}) {
+            var properties = "$.components.schemas['" + schema + "'].properties";
+            response.andExpect(jsonPath(properties).isMap());
+            for (String field : new String[]{"id", "equipmentId", "constructionUserId", "rentalCompanyUserId", "startDate", "endDate", "status", "createdAt"}) {
+                response.andExpect(jsonPath(properties + "." + field).exists());
+            }
+        }
+    }
+
     @Test void swaggerContainsEstablishedRoutesForAllSixContexts() throws Exception {
         String openApi = mockMvc.perform(get("/v3/api-docs"))
             .andExpect(status().isOk())

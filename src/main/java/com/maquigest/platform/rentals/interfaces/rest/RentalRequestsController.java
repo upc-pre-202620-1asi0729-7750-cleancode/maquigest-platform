@@ -3,13 +3,18 @@ package com.maquigest.platform.rentals.interfaces.rest;
 import com.maquigest.platform.rentals.application.commandservices.RentalRequestCommandService;
 import com.maquigest.platform.rentals.application.exceptions.RentalsException;
 import com.maquigest.platform.rentals.application.queryservices.RentalQueryService;
-import com.maquigest.platform.rentals.domain.model.commands.*;
 import com.maquigest.platform.rentals.domain.model.queries.*;
 import com.maquigest.platform.rentals.domain.model.valueobjects.RentalRequestStatus;
 import com.maquigest.platform.rentals.interfaces.rest.security.RentalActorPolicy;
+import com.maquigest.platform.rentals.interfaces.rest.resources.CreateRentalRequestResource;
+import com.maquigest.platform.rentals.interfaces.rest.resources.UpdateRentalRequestResource;
 import com.maquigest.platform.rentals.interfaces.rest.resources.RentalRequestResource;
 import com.maquigest.platform.rentals.interfaces.rest.resources.RescheduleRentalRequestResource;
 import com.maquigest.platform.rentals.interfaces.rest.transform.RentalResourceAssembler;
+import com.maquigest.platform.rentals.interfaces.rest.transform.CreateRentalRequestCommandFromResourceAssembler;
+import com.maquigest.platform.rentals.interfaces.rest.transform.ResolveRentalRequestCommandFromResourceAssembler;
+import com.maquigest.platform.rentals.interfaces.rest.transform.RescheduleRentalRequestCommandFromResourceAssembler;
+import com.maquigest.platform.rentals.interfaces.rest.transform.RentalRequestResourceFromEntityAssembler;
 import com.maquigest.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -45,7 +50,7 @@ public class RentalRequestsController {
     public List<RentalRequestResource> all(Authentication auth) {
         var actor = current(auth);
         return queries.handle(new GetRentalRequestsQuery(actor.userId())).stream()
-            .map(RentalResourceAssembler::from).toList();
+            .map(RentalRequestResourceFromEntityAssembler::toResourceFromEntity).toList();
     }
 
     @GetMapping("/{id}")
@@ -54,21 +59,20 @@ public class RentalRequestsController {
         var actor = current(auth);
         if (id == null || id <= 0) throw RentalsException.notFound("RentalRequest");
         return queries.handle(new GetRentalRequestByIdQuery(id, actor.userId()))
-            .map(RentalResourceAssembler::from)
+            .map(RentalRequestResourceFromEntityAssembler::toResourceFromEntity)
             .orElseThrow(() -> RentalsException.notFound("RentalRequest"));
     }
 
     @PostMapping(consumes=APPLICATION_JSON_VALUE)
     @Operation(summary="Submit a pending request (construction company)")
-    public ResponseEntity<RentalRequestResource> create(@RequestBody RentalRequestResource body, Authentication auth) {
+    public ResponseEntity<RentalRequestResource> create(@RequestBody CreateRentalRequestResource body, Authentication auth) {
         var actor = current(auth);
         if (!actor.constructionCompany() || body == null || !actor.userId().equals(body.constructionUserId()))
             throw RentalsException.forbidden();
         if (body.status() != null && body.status() != RentalRequestStatus.PENDING)
             throw RentalsException.invalid("New requests must be PENDING");
-        var created = ResponseEntityAssembler.valueOrThrow(commands.handle(new CreateRentalRequestCommand(body.equipmentId(), actor.userId(),
-            body.rentalCompanyUserId(), RentalResourceAssembler.parsePeriod(body.startDate(), body.endDate()))), RentalsException::fromApplicationError);
-        return ResponseEntity.status(HttpStatus.CREATED).body(RentalResourceAssembler.from(created));
+        var created = ResponseEntityAssembler.valueOrThrow(commands.handle(CreateRentalRequestCommandFromResourceAssembler.toCommandFromResource(body, actor.userId())), RentalsException::fromApplicationError);
+        return ResponseEntity.status(HttpStatus.CREATED).body(RentalRequestResourceFromEntityAssembler.toResourceFromEntity(created));
     }
 
     @PatchMapping(value="/{id}/period", consumes=APPLICATION_JSON_VALUE)
@@ -79,14 +83,13 @@ public class RentalRequestsController {
         var actor = current(auth);
         if (!actor.constructionCompany()) throw RentalsException.forbidden();
         if (body == null) throw RentalsException.invalid("New rental dates are required");
-        var newPeriod = RentalResourceAssembler.parsePeriod(body.startDate(), body.endDate());
-        return RentalResourceAssembler.from(
-            ResponseEntityAssembler.valueOrThrow(commands.handle(new RescheduleRentalRequestCommand(id, actor.userId(), newPeriod)), RentalsException::fromApplicationError));
+        return RentalRequestResourceFromEntityAssembler.toResourceFromEntity(
+            ResponseEntityAssembler.valueOrThrow(commands.handle(RescheduleRentalRequestCommandFromResourceAssembler.toCommandFromResource(id, actor.userId(), body)), RentalsException::fromApplicationError));
     }
 
     @PutMapping(value="/{id}", consumes=APPLICATION_JSON_VALUE)
     @Operation(summary="Approve or reject (authenticated equipment owner)")
-    public RentalRequestResource update(@PathVariable Long id, @RequestBody RentalRequestResource body, Authentication auth) {
+    public RentalRequestResource update(@PathVariable Long id, @RequestBody UpdateRentalRequestResource body, Authentication auth) {
         var actor = current(auth);
         if (!actor.rentalCompany()) throw RentalsException.forbidden();
         if (body == null || body.status() == null) throw RentalsException.invalid("Request status is required");
@@ -99,6 +102,6 @@ public class RentalRequestsController {
             || !Objects.equals(body.rentalCompanyUserId(), original.getRentalCompanyUserId())
             || !RentalResourceAssembler.parsePeriod(body.startDate(), body.endDate()).equals(original.getPeriod()))
             throw RentalsException.invalid("Request participants, equipment and dates cannot be edited");
-        return RentalResourceAssembler.from(ResponseEntityAssembler.valueOrThrow(commands.handle(new ResolveRentalRequestCommand(id, actor.userId(), body.status())), RentalsException::fromApplicationError));
+        return RentalRequestResourceFromEntityAssembler.toResourceFromEntity(ResponseEntityAssembler.valueOrThrow(commands.handle(ResolveRentalRequestCommandFromResourceAssembler.toCommandFromResource(id, actor.userId(), body)), RentalsException::fromApplicationError));
     }
 }

@@ -14,12 +14,8 @@ public final class RentalResourceAssembler {
         if(start.isAfter(end)) throw RentalsException.invalid("Invalid rental period");
         return range;
     }
-    private static Instant periodStart(RentalPeriod p){return p.startDate().atStartOfDay(LIMA).toInstant();}
-    private static Instant periodEnd(RentalPeriod p){return p.endDate().plusDays(1).atStartOfDay(LIMA).toInstant().minusMillis(1);}
-    public static RentalRequestResource from(RentalRequest r) {
-        return new RentalRequestResource(r.getId(),r.getEquipmentId(),r.getConstructionUserId(),
-          r.getRentalCompanyUserId(),periodStart(r.getPeriod()),periodEnd(r.getPeriod()),r.getStatus(),r.getCreatedAt());
-    }
+    static Instant periodStart(RentalPeriod p){return p.startDate().atStartOfDay(LIMA).toInstant();}
+    static Instant periodEnd(RentalPeriod p){return p.endDate().plusDays(1).atStartOfDay(LIMA).toInstant().minusMillis(1);}
     public static RentalResource from(Rental r) {
         return new RentalResource(r.getId(),r.getEquipmentId(),r.getConstructionUserId(),
           r.getRentalCompanyUserId(),periodStart(r.getPeriod()),periodEnd(r.getPeriod()),r.getStatus());
