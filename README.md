@@ -2,45 +2,99 @@
 
 **CleanCode · Aplicaciones Open Source · UPC · NRC 7750**
 
-## Overview
+## Descripción
 
-MaquiGest Platform is the Spring Boot REST API for construction-equipment rental management. It provides the business rules, authentication, authorization and MySQL persistence for [MaquiGest WebApp](https://github.com/upc-pre-202620-1asi0729-7750-cleancode/maquigest-webapp). The application is organized into six business bounded contexts (`iam`, `profiles`, `inventory`, `rentals`, `maintenance`, `subscriptions`) and a cross-cutting `shared` kernel.
+MaquiGest es una plataforma SaaS para la gestión y el alquiler de maquinaria de construcción, dirigida a empresas arrendadoras y constructoras. Este repositorio implementa la API REST, las reglas de negocio, la seguridad y la persistencia de [MaquiGest WebApp](https://github.com/upc-pre-202620-1asi0729-7750-cleancode/maquigest-webapp).
 
-## Features
+## Tecnologías
 
-All paths below are relative to `/api/v1`. Consult OpenAPI for complete request/response contracts and security requirements.
+Java 27, Spring Boot 4.1.2, Maven Wrapper 3.9.11, MySQL 8, Spring Data JPA, Spring Security, JWT, Jakarta Validation y Swagger/OpenAPI.
 
-| Context | Main resources and operations |
+## Arquitectura y Bounded Contexts
+
+La plataforma es un monolito modular basado en Domain-Driven Design (DDD), arquitectura hexagonal y CQRS. El paquete raíz es `com.maquigest.platform`.
+
+| Bounded Context | Responsabilidad |
 |---|---|
-| IAM | `/authentication/sign-up`, `/authentication/sign-in`, `/authentication/me`, `/authentication/password-recovery`, `/authentication/reset-password`, `/authentication/verify-email`, `/authentication/resend-email-verification`. |
-| Profiles | `/profiles`: company profile provisioning, lookup and update. |
-| Inventory | `/equipment`, `/equipment-categories`: equipment management, operational status, availability blocks and availability queries. |
-| Rentals | `/rental-requests`, `/rentals`, `/deliveries`, `/equipment-returns`: requests, period changes, approval/rejection, delivery and return. `GET /rentals/{rentalId}/locations?address=...`: optional geocoding. |
-| Maintenance | `/maintenances`, `/incidents`: maintenance history, scheduling and tracking, incidents and equipment reactivation. |
-| Subscriptions | `/subscription-plans`, `/user-subscriptions`, `/subscription-checkouts`: plans, subscription management and Stripe test checkout. |
+| IAM | Registro, autenticación, verificación de correo y recuperación de contraseña. |
+| Profiles | Gestión de perfiles empresariales. |
+| Inventory | Gestión de maquinaria, categorías, estado y disponibilidad. |
+| Rentals | Solicitudes, reprogramación, aprobación, entrega y devolución de maquinaria. |
+| Maintenance | Mantenimientos, incidencias e historial de equipos. |
+| Subscriptions | Planes, suscripciones y checkout de prueba. |
 
-Each business context owns its notifications: `/iam-notifications`, `/profile-notifications`, `/inventory-notifications`, `/rental-notifications`, `/maintenance-notifications`, `/subscriptions-notifications`. Each supports `GET` collection, `GET /{id}` and `PATCH /{id}/read`, scoped to the authenticated recipient.
+El módulo `shared` contiene abstracciones transversales e infraestructura común; no constituye un Bounded Context de negocio adicional.
 
-## Technologies and prerequisites
+| Capa | Responsabilidad |
+|---|---|
+| `domain` | Aggregates, Entities, Value Objects, Commands, Queries y contratos de repositorio. |
+| `application` | Servicios CQRS, coordinación de casos de uso y manejo de eventos. |
+| `infrastructure` | Adaptadores, entidades JPA, repositorios de persistencia y servicios externos. |
+| `interfaces` | Controllers REST, Resources, Assemblers y contratos publicados. |
 
-- Java 27 (validated with 27.0.1.0.3), Spring Boot 4.1.2, Maven Wrapper 3.9.11.
-- MySQL 8 (validated with 8.0.46), Spring Data JPA/Hibernate, Spring Security/JWT, Jakarta Validation, Lombok, springdoc-openapi 3.2.0.
-- Git, JDK configured in `JAVA_HOME`, local MySQL server and a user with access to the development schema.
-- SendGrid, Stripe Checkout and Google Maps Geocoding are optional external integrations, disabled by default.
+### Patrones arquitectónicos
 
-## Architecture
+- **CQRS:** separación de Commands y Queries mediante contratos de servicio y métodos `handle`.
+- **Result Pattern:** representación de resultados y errores esperados con `Result<T, ApplicationError>` en los servicios de comandos.
+- **Transformer Pattern:** Assemblers para traducir entre Resources, Commands, modelos de dominio y persistencia, según corresponda.
+- **OHS y ACL:** fachadas públicas y adaptadores consumidores que protegen los límites de los contextos.
+- **Published Language:** contratos públicos de integración mediante fachadas, eventos y recursos REST.
+- **Domain Events e Integration Events:** coordinación de hechos de negocio mediante handlers y contratos de integración internos.
 
-The package root is `com.maquigest.platform`. Business contexts are separated into `domain`, `application`, `infrastructure` and `interfaces`. Domain aggregates and value objects encapsulate invariants; domain repositories provide persistence contracts. JPA entities, persistence assemblers and repository adapters live in infrastructure. Public command/query contracts and their implementations are separated using CQRS. REST resources and assemblers translate the public API. ACL ports/facades and published integration events support cross-context coordination. Expected command failures use `Result<T, ApplicationError>` where the application contract provides it; existing REST contracts are preserved.
+### Context Mapping
 
-`shared` supplies cross-cutting infrastructure and application abstractions, not a seventh business context. Notifications are owned by each business context rather than a standalone notification context. Application errors and notification text support English and Spanish; use `Accept-Language: es-PE` to request Spanish where supported.
+| Consumidor | Proveedor | Contrato público |
+|---|---|---|
+| Profiles y Rentals | IAM | `IamCompanyDirectoryFacade` |
+| Subscriptions | IAM | `IamSubscriberFacade` |
+| Inventory, Profiles, Rentals, Maintenance y Subscriptions | IAM | `IamActorFacade` |
+| Rentals | Inventory | `InventoryRentalFacade` |
+| Rentals y Maintenance | Subscriptions | `SubscriptionsContextFacade` |
+| Maintenance | Inventory | `InventoryMaintenanceFacade` |
+| Maintenance | Rentals | `RentalsMaintenanceFacade` |
 
-### Architecture decisions
+## Decisiones arquitectónicas (ADR)
 
-- [Aggregate persistence boundaries](docs/adr-aggregate-persistence-boundaries.md): delivery/return and maintenance history remain child entities of their lifecycle roots.
-- [In-process integration events](docs/adr-in-process-domain-integration-events.md): published integration contracts use after-commit bridges. This historical ADR predates the later notification/email features; those do not introduce a durable outbox or external event broker.
-- [Rental request concurrency](docs/adr-rentals-request-concurrency.md): InnoDB guard row serializes overlapping requests. The historical ADR records a proposed status; the opt-in MySQL test has since passed locally. The simultaneous authenticated REST POST/PATCH deployment check remains outstanding.
+### ADR 01 — Propiedad de las notificaciones
 
-## Getting started (Windows PowerShell)
+**Estado:** Aceptado e implementado.
+
+#### Contexto
+
+MaquiGest necesita comunicar hechos de negocio a las empresas arrendadoras y constructoras. El alcance del proyecto define seis Bounded Contexts, cada uno con responsabilidades y lenguaje propios. Las notificaciones acompañan sus procesos de negocio; no se definió la gestión de comunicaciones como un subdominio independiente.
+
+#### Decisión y justificación
+
+Se implementa un aggregate root `Notification` dentro de cada Bounded Context. Cada agregado tiene identidad, destinatario, referencia al hecho de negocio, tipo y estado de lectura propios, junto con sus repositorios, Commands, Queries y servicios.
+
+Esta decisión preserva el **Ubiquitous Language**, porque cada contexto determina el significado de sus avisos y sus reglas de generación y destinatarios. Favorece la cohesión y la encapsulación: los hechos de negocio se comunican desde el modelo que los conoce, sin depender de los modelos internos de otros contextos.
+
+La frontera de un agregado delimita sus invariantes y ciclo de vida, mientras que la de un Bounded Context delimita un modelo de dominio. Por ello, una notificación puede tener su propio agregado sin requerir un contexto adicional. Marcar un aviso como leído no obliga a modificar el agregado que originó el hecho.
+
+Un Bounded Context independiente de notificaciones sería una alternativa válida si la gestión de comunicaciones tuviera reglas y un modelo propios. En el alcance actual, mantener agregados locales evita introducir esa frontera y contratos adicionales sin una necesidad de negocio específica. Tampoco se utiliza un agregado global en `shared`: allí se comparten únicamente abstracciones técnicas, como el puerto `EmailGateway`.
+
+#### Implementación
+
+| Contexto | Notificaciones | Recurso REST bajo `/api/v1` |
+|---|---|---|
+| IAM | Registro de cuenta. | `/iam-notifications` |
+| Profiles | Creación y actualización del perfil. | `/profile-notifications` |
+| Inventory | Registro y cambio de estado de maquinaria. | `/inventory-notifications` |
+| Rentals | Solicitud creada, aprobada, rechazada, entrega y devolución. | `/rental-notifications` |
+| Maintenance | Mantenimiento programado y completado; incidencia reportada y resuelta. | `/maintenance-notifications` |
+| Subscriptions | Activación y cancelación de suscripción. | `/subscriptions-notifications` |
+
+Cada contexto posee su propio `NotificationType`, repositorio, tabla de persistencia y recursos REST. Los handlers locales crean notificaciones mediante `@TransactionalEventListener(BEFORE_COMMIT)`; el envío de correo de alquileres se procesa mediante un handler `AFTER_COMMIT`. La consulta y el marcado de lectura están restringidos al destinatario autenticado.
+
+**Ejemplo:** cuando una arrendadora aprueba una solicitud, Rentals genera `RENTAL_REQUEST_APPROVED`. La constructora puede consultar el aviso y marcarlo como leído sin alterar el estado del alquiler. La responsabilidad sobre la notificación permanece en Rentals.
+
+## Seguridad e internacionalización
+
+La API utiliza Spring Security y JWT Bearer para las operaciones protegidas. El registro y el inicio de sesión se realizan mediante `POST /api/v1/authentication/sign-up` y `POST /api/v1/authentication/sign-in`. Los mensajes localizados admiten inglés y español; se puede solicitar español con `Accept-Language: es-PE`.
+
+## Ejecución local (Windows PowerShell)
+
+Requisitos: JDK 27 configurado en `JAVA_HOME`, Git y MySQL 8 en ejecución.
 
 ```powershell
 git clone https://github.com/upc-pre-202620-1asi0729-7750-cleancode/maquigest-platform.git
@@ -49,9 +103,9 @@ git switch develop
 $env:SPRING_PROFILES_ACTIVE = 'dev'
 $env:DATABASE_URL = 'localhost'
 $env:DATABASE_PORT = '3306'
-$env:DATABASE_NAME = 'maquigest-platform'
+$env:DATABASE_NAME = 'maquigest-platform-dev'
 $env:DATABASE_USER = 'root'
-$credential = Get-Credential -UserName $env:DATABASE_USER -Message 'Local MySQL credentials'
+$credential = Get-Credential -UserName $env:DATABASE_USER -Message 'Credenciales MySQL'
 $env:DATABASE_PASSWORD = $credential.GetNetworkCredential().Password
 $bytes = New-Object byte[] 64
 $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
@@ -61,50 +115,36 @@ $env:JWT_SECRET = [Convert]::ToBase64String($bytes)
 .\mvnw.cmd spring-boot:run
 ```
 
-Use a stable, securely managed JWT secret across restarts if sessions must survive. The example generates a new local-only secret. Do not commit secrets or share their values. After stopping the application, remove sensitive environment variables from the shell. Swagger UI: `http://localhost:8080/swagger-ui/index.html`; OpenAPI: `http://localhost:8080/v3/api-docs`. Register a `rental_company` or `construction_company`, sign in, and use the returned JWT as `Authorization: Bearer <token>` for protected resources. Local frontend: `http://localhost:4200`.
+Utilizar una base exclusiva de desarrollo: el perfil `dev` permite actualizar el esquema. No compartir ni versionar credenciales. Para conservar sesiones entre reinicios, gestionar un secreto JWT estable de forma segura.
 
-## Configuration
-
-| Environment variable | Purpose / default |
+| Recurso | URL local |
 |---|---|
-| `SPRING_PROFILES_ACTIVE` | `dev` by default; use `prod` for deployment. |
-| `DATABASE_URL`, `DATABASE_PORT`, `DATABASE_NAME`, `DATABASE_USER` | MySQL connection; development defaults `localhost`, `3306`, `maquigest-platform`, `root`. Required in production. |
-| `DATABASE_PASSWORD` | Required database password. |
-| `JWT_SECRET` | Required signing secret in both profiles. |
-| `PORT` | HTTP port, default `8080`. |
-| `CORS_ALLOWED_ORIGINS` | Comma-separated permitted origins; local defaults include `http://localhost:4200`. |
-| `MAQUIGEST_WEBAPP_BASE_URL` | Frontend origin for recovery, verification and checkout redirects; default `http://localhost:4200`. |
-| `MAQUIGEST_EMAIL_ENABLED` | Enable SendGrid transport; default `false`. |
-| `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME` | Verified sender and server-side credentials; name defaults to `MaquiGest`. |
-| `MAQUIGEST_EMAIL_LOCALE` | Rental email language; default `es-PE`. |
-| `MAQUIGEST_IAM_EMAIL_VERIFICATION_REQUIRED` | Require verification of newly registered accounts; default `false`. Enable only when email delivery is configured. |
-| `MAQUIGEST_STRIPE_ENABLED` | Enable Stripe test checkout; default `false`. |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Sandbox server-side key and signing secret. |
-| `MAQUIGEST_MAPS_ENABLED`, `GOOGLE_MAPS_API_KEY` | Optional server-side geocoding; disabled by default. |
+| Swagger UI | http://localhost:8080/swagger-ui/index.html |
+| OpenAPI | http://localhost:8080/v3/api-docs |
+| WebApp | http://localhost:4200 |
 
-| Profile | Persistence |
-|---|---|
-| `dev` | `ddl-auto=update`, database creation allowed, SQL logging enabled. |
-| `prod` | `ddl-auto=validate`, database creation disabled, SQL logging off; direct unpaid subscription activation blocked. |
+## Integraciones externas
 
-## External integration boundaries
+Las integraciones opcionales se habilitan mediante variables de entorno y requieren credenciales del servidor.
 
-- SendGrid sends rental-request lifecycle emails and IAM recovery/verification links. Delivery occurs outside the originating committed business transaction; no durable retry/outbox guarantee. Recovery and verification tokens are hashed, time-limited and single-use.
-- Stripe uses a **test/sandbox-only** one-time Checkout payment for a monthly plan in PEN. Confirmation and signed webhook settlement verify provider data on the server; no recurring billing or real charges. Configure `/api/v1/subscription-checkouts/webhook` for test events `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`.
-- Google Maps resolves a planning address for an authorized rental company. Lookup does not persist a delivery/return location or modify rental status. No real-time tracking or routing engine.
+| Servicio | Funcionalidad | Variables principales |
+|---|---|---|
+| SendGrid | Correo de alquileres, verificación y recuperación. | `MAQUIGEST_EMAIL_ENABLED`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL` |
+| Stripe | Checkout de suscripciones en sandbox. | `MAQUIGEST_STRIPE_ENABLED`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` |
+| Google Maps | Geocodificación de direcciones de planificación. | `MAQUIGEST_MAPS_ENABLED`, `GOOGLE_MAPS_API_KEY` |
 
-## Build and tests
+## Pruebas
+
+Ejecutar sobre un esquema desechable, comprobando primero la configuración efectiva de conexión y sin utilizar datos ni credenciales de producción.
 
 ```powershell
+$env:DATABASE_NAME = 'maquigest_documented_test_local'
+$env:SPRING_PROFILES_ACTIVE = 'dev'
+$env:MAQUIGEST_EMAIL_ENABLED = 'false'
+$env:MAQUIGEST_IAM_EMAIL_VERIFICATION_REQUIRED = 'false'
+$env:MAQUIGEST_STRIPE_ENABLED = 'false'
+$env:MAQUIGEST_MAPS_ENABLED = 'false'
 .\mvnw.cmd clean verify
 ```
 
-Run against a dedicated disposable MySQL schema, with external integrations disabled. The Phase 6 baseline `23fb87c` passed 373 tests in the general regression and 11 additional opt-in MySQL tests in complementary runs (384 total, zero failures/errors). The opt-in suites require explicitly enabled test flags and dedicated schema names; inspect their conditions before execution. The production profile was also rehearsed locally on a newly initialized isolated schema, with OpenAPI, JWT and unpaid-checkout protection verified. These are not evidence of a completed cloud migration.
-
-## Deployment and known limitations
-
-`system.properties` declares Java 27. The target backend/MySQL hosting is Northflank; verify its runtime, secrets, backup and schema migration before deploying `prod`. Deploy only after schema validation against the intended updated database. Configure provider credentials and the public frontend origin on the server; never expose keys in Angular. Rotate any previously exposed credentials before deploying. Stripe remains sandbox-only even with `prod` enabled. The npm audit findings in the companion WebApp remain unresolved.
-
-## Version control
-
-Releases use GitFlow and Semantic Versioning; this documentation does not create a release or tag.
+El proyecto utiliza GitFlow y Semantic Versioning.
