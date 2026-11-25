@@ -24,12 +24,12 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping(value="/api/v1/rental-requests", produces=APPLICATION_JSON_VALUE)
 @Tag(name="Rental Requests", description="Construction requests and owner decision workflow")
 @SecurityRequirement(name="bearerAuth")
-public class RentalRequestController {
+public class RentalRequestsController {
     private final RentalRequestCommandService commands;
     private final RentalQueryService queries;
     private final RentalActorPolicy policy;
 
-    public RentalRequestController(RentalRequestCommandService commands, RentalQueryService queries,
+    public RentalRequestsController(RentalRequestCommandService commands, RentalQueryService queries,
                                    RentalActorPolicy policy) {
         this.commands = commands;
         this.queries = queries;

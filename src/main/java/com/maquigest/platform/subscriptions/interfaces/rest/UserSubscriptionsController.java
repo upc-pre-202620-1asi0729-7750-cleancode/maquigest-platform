@@ -25,11 +25,11 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping(value="/api/v1/user-subscriptions",produces=APPLICATION_JSON_VALUE)
 @Tag(name="User Subscriptions",description="Subscribe rental companies and control inventory access")
 @SecurityRequirement(name="bearerAuth")
-public class UserSubscriptionController {
+public class UserSubscriptionsController {
     private final UserSubscriptionQueryService queries;
     private final UserSubscriptionCommandService commands;
     private final SubscriptionOwnershipPolicy ownership;
-    public UserSubscriptionController(UserSubscriptionQueryService queries,
+    public UserSubscriptionsController(UserSubscriptionQueryService queries,
             UserSubscriptionCommandService commands, SubscriptionOwnershipPolicy ownership) {
         this.queries=queries; this.commands=commands; this.ownership=ownership;
     }

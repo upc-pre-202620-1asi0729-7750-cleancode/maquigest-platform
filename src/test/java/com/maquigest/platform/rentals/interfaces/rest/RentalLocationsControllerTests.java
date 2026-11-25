@@ -13,11 +13,11 @@ import java.util.Locale;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-class RentalLocationControllerTests {
+class RentalLocationsControllerTests {
     private final RentalLocationQueryService service = mock(RentalLocationQueryService.class);
     private final RentalActorPolicy actors = mock(RentalActorPolicy.class);
     private final Authentication auth = mock(Authentication.class);
-    private final RentalLocationController controller = new RentalLocationController(service, actors);
+    private final RentalLocationsController controller = new RentalLocationsController(service, actors);
     @Test void ownerResourceIsNotCacheable() {
         LocaleContextHolder.setLocale(Locale.forLanguageTag("es-PE"));
         try {

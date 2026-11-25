@@ -23,11 +23,11 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping(value="/api/v1/profiles",produces=APPLICATION_JSON_VALUE)
 @Tag(name="Profiles",description="Company profile management")
 @SecurityRequirement(name="bearerAuth")
-public class CompanyProfileController {
+public class ProfilesController {
     private final CompanyProfileCommandService commands;
     private final CompanyProfileQueryService queries;
     private final ProfileOwnershipPolicy policy;
-    public CompanyProfileController(CompanyProfileCommandService commands,CompanyProfileQueryService queries,
+    public ProfilesController(CompanyProfileCommandService commands,CompanyProfileQueryService queries,
                                     ProfileOwnershipPolicy policy){
         this.commands=commands;this.queries=queries;this.policy=policy;
     }

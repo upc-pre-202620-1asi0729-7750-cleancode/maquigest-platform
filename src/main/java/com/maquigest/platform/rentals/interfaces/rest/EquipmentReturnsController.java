@@ -20,9 +20,9 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping(value="/api/v1/equipment-returns",produces=APPLICATION_JSON_VALUE)
 @Tag(name="Equipment Returns",description="Complete rentals and release only their own reservation")
 @SecurityRequirement(name="bearerAuth")
-public class EquipmentReturnController {
+public class EquipmentReturnsController {
     private final RentalLifecycleCommandService commands;private final RentalQueryService queries;private final RentalActorPolicy policy;
-    public EquipmentReturnController(RentalLifecycleCommandService commands,RentalQueryService queries,RentalActorPolicy policy){
+    public EquipmentReturnsController(RentalLifecycleCommandService commands,RentalQueryService queries,RentalActorPolicy policy){
         this.commands=commands;this.queries=queries;this.policy=policy;
     }
     private Long actor(Authentication auth,boolean management) {

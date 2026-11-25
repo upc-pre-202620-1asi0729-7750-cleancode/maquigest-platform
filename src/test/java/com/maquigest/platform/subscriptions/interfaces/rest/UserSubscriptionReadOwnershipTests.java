@@ -25,7 +25,7 @@ class UserSubscriptionReadOwnershipTests {
     private final IamActorFacade actors = mock(IamActorFacade.class);
     private final UserSubscriptionRepository repository = mock(UserSubscriptionRepository.class);
     private final UserSubscriptionCommandService commands = mock(UserSubscriptionCommandService.class);
-    private final UserSubscriptionController controller = new UserSubscriptionController(
+    private final UserSubscriptionsController controller = new UserSubscriptionsController(
         new UserSubscriptionQueryServiceImpl(repository), commands, new SubscriptionOwnershipPolicy(actors));
 
     @BeforeEach void setup() {

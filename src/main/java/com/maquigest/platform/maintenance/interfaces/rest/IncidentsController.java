@@ -21,10 +21,10 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping(value="/api/v1/incidents",produces=APPLICATION_JSON_VALUE)
 @Tag(name="Incidents",description="Equipment incident reporting, resolution and rental restrictions")
 @SecurityRequirement(name="bearerAuth")
-public class IncidentController {
+public class IncidentsController {
     private final IncidentCommandService commands;private final MaintenanceQueryService queries;
     private final MaintenanceActorPolicy policy;
-    public IncidentController(IncidentCommandService commands,MaintenanceQueryService queries,MaintenanceActorPolicy policy){
+    public IncidentsController(IncidentCommandService commands,MaintenanceQueryService queries,MaintenanceActorPolicy policy){
         this.commands=commands;this.queries=queries;this.policy=policy;
     }
     @GetMapping @Operation(summary="List company incidents or inspect a machine's public rental restrictions")

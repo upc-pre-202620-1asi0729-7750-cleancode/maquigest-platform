@@ -21,11 +21,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 @RestController
 @RequestMapping("/api/v1/subscription-checkouts")
 @Tag(name="Subscription Checkouts")
-public class SubscriptionCheckoutController {
+public class SubscriptionCheckoutsController {
     private final SubscriptionCheckoutCommandService commands;
     private final SubscriptionOwnershipPolicy ownership;
     private final MessageSource messages;
-    public SubscriptionCheckoutController(SubscriptionCheckoutCommandService commands,SubscriptionOwnershipPolicy ownership,MessageSource messages){this.commands=commands;this.ownership=ownership;this.messages=messages;}
+    public SubscriptionCheckoutsController(SubscriptionCheckoutCommandService commands,SubscriptionOwnershipPolicy ownership,MessageSource messages){this.commands=commands;this.ownership=ownership;this.messages=messages;}
     private Long owner(Authentication auth){return ownership.authenticatedOwnerId(auth).orElseThrow(()->new CheckoutFailure(FORBIDDEN));}
     @PostMapping @SecurityRequirement(name="bearerAuth") @Operation(summary="Start or resume a Stripe test checkout")
     public ResponseEntity<?> create(@Valid @RequestBody CreateSubscriptionCheckoutResource resource,Authentication auth){

@@ -12,7 +12,7 @@ import com.maquigest.platform.subscriptions.application.ports.StripeCheckoutPort
 import com.maquigest.platform.subscriptions.domain.model.aggregates.SubscriptionCheckout;
 import com.maquigest.platform.subscriptions.domain.model.commands.*;
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.CheckoutStatus;
-import com.maquigest.platform.subscriptions.interfaces.rest.SubscriptionCheckoutController;
+import com.maquigest.platform.subscriptions.interfaces.rest.SubscriptionCheckoutsController;
 import com.maquigest.platform.subscriptions.interfaces.rest.resources.*;
 import com.maquigest.platform.subscriptions.interfaces.rest.security.SubscriptionOwnershipPolicy;
 import org.junit.jupiter.api.Test;
@@ -135,7 +135,7 @@ class CommandResultConventionTests {
         when(ownership.authenticatedOwnerId(auth)).thenReturn(Optional.of(3L));
         var messages = new StaticMessageSource();
         var locale = LocaleContextHolder.getLocale();
-        var controller = new SubscriptionCheckoutController(commands, ownership, messages);
+        var controller = new SubscriptionCheckoutsController(commands, ownership, messages);
         var success = new CheckoutResult("ref", CheckoutStatus.PENDING, "https://checkout.stripe.com/test", null);
         when(commands.handle(any(CreateSubscriptionCheckoutCommand.class))).thenReturn(Result.success(success));
         when(commands.handle(any(RefreshSubscriptionCheckoutCommand.class))).thenReturn(Result.success(success));

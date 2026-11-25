@@ -20,9 +20,9 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping(value="/api/v1/deliveries",produces=APPLICATION_JSON_VALUE)
 @Tag(name="Deliveries",description="Register equipment handover")
 @SecurityRequirement(name="bearerAuth")
-public class DeliveryController {
+public class DeliveriesController {
     private final RentalLifecycleCommandService commands;private final RentalQueryService queries;private final RentalActorPolicy policy;
-    public DeliveryController(RentalLifecycleCommandService commands,RentalQueryService queries,RentalActorPolicy policy){
+    public DeliveriesController(RentalLifecycleCommandService commands,RentalQueryService queries,RentalActorPolicy policy){
         this.commands=commands;this.queries=queries;this.policy=policy;
     }
     private Long actor(Authentication auth,boolean management) {

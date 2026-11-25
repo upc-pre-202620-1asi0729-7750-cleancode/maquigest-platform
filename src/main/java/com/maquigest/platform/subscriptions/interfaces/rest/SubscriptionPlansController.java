@@ -12,9 +12,9 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping(value="/api/v1/subscription-plans", produces=APPLICATION_JSON_VALUE)
 @Tag(name="Subscription Plans",description="Subscription plan catalog")
 @SecurityRequirement(name="bearerAuth")
-public class SubscriptionPlanController {
+public class SubscriptionPlansController {
     private final SubscriptionPlanQueryService queries;
-    public SubscriptionPlanController(SubscriptionPlanQueryService queries) { this.queries=queries; }
+    public SubscriptionPlansController(SubscriptionPlanQueryService queries) { this.queries=queries; }
     @GetMapping @Operation(summary="List subscription plans")
     public ResponseEntity<?> getAll() {
         return ResponseEntity.ok(queries.handle(new GetAllSubscriptionPlansQuery()).stream()

@@ -24,10 +24,10 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping(value="/api/v1/rentals/{rentalId}/locations", produces=APPLICATION_JSON_VALUE)
 @Tag(name="Rental Locations", description="Optional delivery and return location planning")
 @SecurityRequirement(name="bearerAuth")
-public class RentalLocationController {
+public class RentalLocationsController {
     private final RentalLocationQueryService queries;
     private final RentalActorPolicy policy;
-    public RentalLocationController(RentalLocationQueryService queries, RentalActorPolicy policy) {
+    public RentalLocationsController(RentalLocationQueryService queries, RentalActorPolicy policy) {
         this.queries = queries; this.policy = policy;
     }
     @GetMapping

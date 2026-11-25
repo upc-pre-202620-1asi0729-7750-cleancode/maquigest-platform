@@ -6,25 +6,25 @@ import com.maquigest.platform.inventory.interfaces.rest.EquipmentController;
 import com.maquigest.platform.inventory.interfaces.rest.security.InventoryOwnershipPolicy;
 import com.maquigest.platform.profiles.application.commandservices.CompanyProfileCommandService;
 import com.maquigest.platform.profiles.application.queryservices.CompanyProfileQueryService;
-import com.maquigest.platform.profiles.interfaces.rest.CompanyProfileController;
+import com.maquigest.platform.profiles.interfaces.rest.ProfilesController;
 import com.maquigest.platform.profiles.interfaces.rest.resources.UpdateCompanyProfileResource;
 import com.maquigest.platform.profiles.interfaces.rest.security.ProfileOwnershipPolicy;
 import com.maquigest.platform.subscriptions.application.commandservices.UserSubscriptionCommandService;
 import com.maquigest.platform.subscriptions.application.queryservices.UserSubscriptionQueryService;
-import com.maquigest.platform.subscriptions.interfaces.rest.UserSubscriptionController;
+import com.maquigest.platform.subscriptions.interfaces.rest.UserSubscriptionsController;
 import com.maquigest.platform.maintenance.application.exceptions.MaintenanceException;
 import com.maquigest.platform.maintenance.interfaces.rest.MaintenanceExceptionHandler;
 import com.maquigest.platform.rentals.application.exceptions.GeographicLookupException;
 import com.maquigest.platform.rentals.application.exceptions.RentalsException;
 import com.maquigest.platform.rentals.application.queryservices.RentalLocationQueryService;
-import com.maquigest.platform.rentals.interfaces.rest.RentalLocationController;
+import com.maquigest.platform.rentals.interfaces.rest.RentalLocationsController;
 import com.maquigest.platform.rentals.interfaces.rest.RentalsExceptionHandler;
 import com.maquigest.platform.rentals.interfaces.rest.security.RentalActorPolicy;
 import com.maquigest.platform.shared.application.result.ApplicationError;
 import com.maquigest.platform.shared.application.result.Result;
 import com.maquigest.platform.subscriptions.application.commandservices.CheckoutFailure;
 import com.maquigest.platform.subscriptions.application.commandservices.SubscriptionCheckoutCommandService;
-import com.maquigest.platform.subscriptions.interfaces.rest.SubscriptionCheckoutController;
+import com.maquigest.platform.subscriptions.interfaces.rest.SubscriptionCheckoutsController;
 import com.maquigest.platform.subscriptions.interfaces.rest.security.SubscriptionOwnershipPolicy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -104,8 +104,8 @@ class ProblemDetailConsistencyTests {
 
     @Test void legacyForbiddenContractsKeepDefaultTypeAndNoDetailsExtension() {
         var equipment = new EquipmentController(mock(EquipmentCommandService.class), mock(EquipmentQueryService.class), mock(InventoryOwnershipPolicy.class));
-        var profiles = new CompanyProfileController(mock(CompanyProfileCommandService.class), mock(CompanyProfileQueryService.class), mock(ProfileOwnershipPolicy.class));
-        var subscriptions = new UserSubscriptionController(mock(UserSubscriptionQueryService.class), mock(UserSubscriptionCommandService.class), mock(SubscriptionOwnershipPolicy.class));
+        var profiles = new ProfilesController(mock(CompanyProfileCommandService.class), mock(CompanyProfileQueryService.class), mock(ProfileOwnershipPolicy.class));
+        var subscriptions = new UserSubscriptionsController(mock(UserSubscriptionQueryService.class), mock(UserSubscriptionCommandService.class), mock(SubscriptionOwnershipPolicy.class));
         var resource = new UpdateCompanyProfileResource(1L, 2L, "QA", "Company", "qa@example.com", "", "QA Company", null);
         var auth = mock(org.springframework.security.core.Authentication.class);
         var equipmentError = assertContract(equipment.delete(1L, auth), 403, "EQUIPMENT_FORBIDDEN");
@@ -145,7 +145,7 @@ class ProblemDetailConsistencyTests {
     }
 
     @Test void geographicFailuresPreserveLocalizedTitleDetailAndNoStore() {
-        var controller = new RentalLocationController(mock(RentalLocationQueryService.class), mock(RentalActorPolicy.class));
+        var controller = new RentalLocationsController(mock(RentalLocationQueryService.class), mock(RentalActorPolicy.class));
         for (var locale : java.util.List.of(Locale.ROOT, Locale.ENGLISH, ES)) {
             LocaleContextHolder.setLocale(locale);
             var bundle = ResourceBundle.getBundle("rental-locations", locale, ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES));
@@ -166,7 +166,7 @@ class ProblemDetailConsistencyTests {
         var messages = new ResourceBundleMessageSource();
         messages.setBasename("messages");
         messages.setDefaultEncoding("UTF-8");
-        var controller = new SubscriptionCheckoutController(mock(SubscriptionCheckoutCommandService.class),
+        var controller = new SubscriptionCheckoutsController(mock(SubscriptionCheckoutCommandService.class),
                 mock(SubscriptionOwnershipPolicy.class), messages);
         for (var locale : java.util.List.of(Locale.ROOT, Locale.ENGLISH, ES)) {
             LocaleContextHolder.setLocale(locale);

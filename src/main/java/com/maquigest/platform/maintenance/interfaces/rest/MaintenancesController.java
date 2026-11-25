@@ -21,10 +21,10 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping(value="/api/v1/maintenances",produces=APPLICATION_JSON_VALUE)
 @Tag(name="Maintenances",description="Maintenance scheduling, execution, tracking and history")
 @SecurityRequirement(name="bearerAuth")
-public class MaintenanceController {
+public class MaintenancesController {
     private final MaintenanceCommandService commands;private final MaintenanceQueryService queries;
     private final MaintenanceActorPolicy policy;
-    public MaintenanceController(MaintenanceCommandService commands,MaintenanceQueryService queries,MaintenanceActorPolicy policy){
+    public MaintenancesController(MaintenanceCommandService commands,MaintenanceQueryService queries,MaintenanceActorPolicy policy){
         this.commands=commands;this.queries=queries;this.policy=policy;
     }
     @GetMapping @Operation(summary="List maintenances owned by the authenticated rental company")

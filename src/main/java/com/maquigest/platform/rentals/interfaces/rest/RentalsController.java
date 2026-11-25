@@ -17,9 +17,9 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping(value="/api/v1/rentals",produces=APPLICATION_JSON_VALUE)
 @Tag(name="Rentals",description="Rentals created exclusively by approved rental requests")
 @SecurityRequirement(name="bearerAuth")
-public class RentalController {
+public class RentalsController {
     private final RentalQueryService queries; private final RentalActorPolicy policy;
-    public RentalController(RentalQueryService queries,RentalActorPolicy policy){this.queries=queries;this.policy=policy;}
+    public RentalsController(RentalQueryService queries,RentalActorPolicy policy){this.queries=queries;this.policy=policy;}
     private Long actor(Authentication auth){return policy.current(auth).orElseThrow(RentalsException::forbidden).userId();}
     @GetMapping @Operation(summary="List rentals visible to authenticated participant")
     public List<RentalResource> all(Authentication auth) {
