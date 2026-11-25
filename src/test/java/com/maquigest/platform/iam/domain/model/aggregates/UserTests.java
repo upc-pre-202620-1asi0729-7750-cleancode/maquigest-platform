@@ -19,6 +19,20 @@ class UserTests {
     }
 
     @Test
+    void rolesCannotBeChangedOutsideAggregate() {
+        var role = new Role(Roles.ROLE_RENTAL_COMPANY);
+        var user = new User("Ada", "Lovelace", "ada@example.com", "hash", "Machines SAC", role);
+        var snapshot = user.getRoles();
+        var added = new Role(Roles.ROLE_USER);
+        assertThrows(UnsupportedOperationException.class, snapshot::clear);
+        assertThrows(UnsupportedOperationException.class, () -> snapshot.add(added));
+        assertEquals(java.util.Set.of(role), user.getRoles());
+        user.addRole(added);
+        assertEquals(java.util.Set.of(role, added), user.getRoles());
+        assertEquals(java.util.Set.of(role), snapshot);
+    }
+
+    @Test
     void rejectsMissingCompany() {
         assertThrows(IllegalArgumentException.class,
                 () -> new User("Ada", "Lovelace", "ada@example.com", "hash", " ",

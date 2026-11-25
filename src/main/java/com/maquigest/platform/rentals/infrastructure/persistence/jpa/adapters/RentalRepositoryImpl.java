@@ -2,14 +2,14 @@ package com.maquigest.platform.rentals.infrastructure.persistence.jpa.adapters;
 import com.maquigest.platform.rentals.domain.model.aggregates.Rental;
 import com.maquigest.platform.rentals.domain.repositories.RentalRepository;
 import com.maquigest.platform.rentals.infrastructure.persistence.jpa.assemblers.RentalPersistenceAssembler;
-import com.maquigest.platform.rentals.infrastructure.persistence.jpa.repositories.RentalJpaRepository;
+import com.maquigest.platform.rentals.infrastructure.persistence.jpa.repositories.RentalPersistenceRepository;
 import com.maquigest.platform.shared.infrastructure.events.DomainEventPublisher;
 import java.util.*;
 import org.springframework.stereotype.Repository;
 @Repository
 public class RentalRepositoryImpl implements RentalRepository {
-    private final RentalJpaRepository jpa; private final DomainEventPublisher publisher;
-    public RentalRepositoryImpl(RentalJpaRepository jpa,DomainEventPublisher publisher){this.jpa=jpa;this.publisher=publisher;}
+    private final RentalPersistenceRepository jpa; private final DomainEventPublisher publisher;
+    public RentalRepositoryImpl(RentalPersistenceRepository jpa,DomainEventPublisher publisher){this.jpa=jpa;this.publisher=publisher;}
     public Optional<Rental> findById(Long id){return jpa.findById(id).map(RentalPersistenceAssembler::toDomain);}
     public Optional<Rental> findByIdForUpdate(Long id){return jpa.findByIdForUpdate(id).map(RentalPersistenceAssembler::toDomain);}
     public Optional<Rental> findByRequestId(Long requestId){return jpa.findByRequestId(requestId).map(RentalPersistenceAssembler::toDomain);}

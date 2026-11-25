@@ -22,6 +22,13 @@ public class UserSubscriptionRepositoryImpl implements UserSubscriptionRepositor
     @Override public Optional<UserSubscription> findById(Long id) {
         return jpa.findById(id).map(UserSubscriptionPersistenceAssembler::toDomain);
     }
+    @Override public List<UserSubscription> findAllByUserId(Long userId) {
+        return jpa.findAllByUserIdOrderByIdAsc(userId).stream()
+            .map(UserSubscriptionPersistenceAssembler::toDomain).toList();
+    }
+    @Override public Optional<UserSubscription> findByIdAndUserId(Long id, Long userId) {
+        return jpa.findByIdAndUserId(id, userId).map(UserSubscriptionPersistenceAssembler::toDomain);
+    }
     @Override public boolean hasUnexpiredActiveSubscription(Long userId, Instant now) {
         return jpa.existsByUserIdAndStatusAndEndDateAfter(userId,SubscriptionStatus.ACTIVE,now);
     }

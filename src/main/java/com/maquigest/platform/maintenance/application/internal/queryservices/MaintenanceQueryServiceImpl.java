@@ -47,9 +47,9 @@ public class MaintenanceQueryServiceImpl implements MaintenanceQueryService {
     @Override public Optional<Maintenance> handle(GetMaintenanceByIdQuery q){
         return maintenances.findById(q.maintenanceId()).filter(m->m.getOwnerUserId().equals(q.actorUserId()));
     }
-    @Override public List<MaintenanceActivity> activities(Long maintenanceId,Long actorUserId){
-        if(handle(new GetMaintenanceByIdQuery(maintenanceId,actorUserId)).isEmpty())throw MaintenanceException.notFound("Maintenance");
-        return activities.findByMaintenanceId(maintenanceId);
+    @Override public List<MaintenanceActivity> handle(GetMaintenanceActivitiesQuery query){
+        if(handle(new GetMaintenanceByIdQuery(query.maintenanceId(),query.actorUserId())).isEmpty())throw MaintenanceException.notFound("Maintenance");
+        return activities.findByMaintenanceId(query.maintenanceId());
     }
     private Instant maintenanceHistoryTime(Maintenance maintenance) {
         if(maintenance.getStatus()==MaintenanceStatus.SCHEDULED)

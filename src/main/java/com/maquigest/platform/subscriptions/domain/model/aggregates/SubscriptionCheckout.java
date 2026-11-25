@@ -1,4 +1,5 @@
 package com.maquigest.platform.subscriptions.domain.model.aggregates;
+import com.maquigest.platform.subscriptions.domain.model.valueobjects.UserId;
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.CheckoutStatus;
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
@@ -8,7 +9,7 @@ import java.util.UUID;
 public final class SubscriptionCheckout extends AbstractDomainAggregateRoot<SubscriptionCheckout> {
     private final Long id;
     private final String reference;
-    private final Long userId;
+    private final UserId userId;
     private final Long planId;
     private final long amountMinor;
     private final Instant expiresAt;
@@ -23,9 +24,10 @@ public final class SubscriptionCheckout extends AbstractDomainAggregateRoot<Subs
         if (sessionId != null && !sessionId.matches("cs_test_[A-Za-z0-9_]+")) throw new IllegalArgumentException("Invalid test session");
         if (status == null || (status == CheckoutStatus.PAID) != (subscriptionId != null) ||
                 subscriptionId != null && (subscriptionId <= 0 || sessionId == null)) throw new IllegalArgumentException("Invalid checkout status");
-        this.id=id;this.reference=reference;this.userId=userId;this.planId=planId;this.amountMinor=amountMinor;
+        this.id=id;this.reference=reference;this.userId=new UserId(userId);this.planId=planId;this.amountMinor=amountMinor;
         this.expiresAt=expiresAt;this.sessionId=sessionId;this.status=status;this.subscriptionId=subscriptionId;
     }
+    public Long getUserId() { return userId.value(); }
     public static SubscriptionCheckout issue(Long userId,Long planId,long amount,Instant expiresAt) {
         return new SubscriptionCheckout(null,UUID.randomUUID().toString(),userId,planId,amount,expiresAt,null,CheckoutStatus.PENDING,null);
     }

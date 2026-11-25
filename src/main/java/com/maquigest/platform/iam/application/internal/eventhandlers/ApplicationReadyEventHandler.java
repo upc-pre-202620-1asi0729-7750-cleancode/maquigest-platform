@@ -26,7 +26,8 @@ public class ApplicationReadyEventHandler {
         var applicationName = event.getApplicationContext().getId();
         log.info("Starting to verify if roles seeding is needed for {} at {}", applicationName, currentTimestamp());
         var seedRolesCommand = new SeedRolesCommand();
-        roleCommandService.handle(seedRolesCommand);
+        var result = roleCommandService.handle(seedRolesCommand);
+        if (result.isFailure()) throw new IllegalStateException("Role seeding failed");
         log.info("Roles seeding verification finished for {} at {}", applicationName, currentTimestamp());
     }
 

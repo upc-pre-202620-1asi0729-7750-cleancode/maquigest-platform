@@ -86,20 +86,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ProblemDetail> handleRuntimeException(RuntimeException ex) {
-        var applicationError = ApplicationError.unexpected(
-                resolveMessageOrDefault("error.unexpected.context", "global-exception-handler"),
-                "An unexpected error occurred"
-        );
-        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(applicationError);
+        return unexpectedResponse();
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleException(Exception ex) {
-        var applicationError = ApplicationError.unexpected(
-                resolveMessageOrDefault("error.unexpected.context", "global-exception-handler"),
-                "An unexpected error occurred"
-        );
-        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(applicationError);
+        return unexpectedResponse();
+    }
+
+    private ResponseEntity<ProblemDetail> unexpectedResponse() {
+        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                ApplicationError.unexpected("global-exception-handler", "An unexpected error occurred"));
     }
 
     private String resolveMessageOrDefault(String key, String defaultValue, Object... args) {

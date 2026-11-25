@@ -2,12 +2,12 @@ package com.maquigest.platform.iam.application.internal.commandservices;
 
 import com.maquigest.platform.iam.application.commandservices.RoleCommandService;
 import com.maquigest.platform.iam.domain.model.commands.SeedRolesCommand;
+import com.maquigest.platform.shared.application.result.ApplicationError;
+import com.maquigest.platform.shared.application.result.Result;
 import com.maquigest.platform.iam.domain.model.entities.Role;
 import com.maquigest.platform.iam.domain.model.valueobjects.Roles;
 import com.maquigest.platform.iam.domain.repositories.RoleRepository;
 import org.springframework.stereotype.Service;
-
-import java.util.Arrays;
 
 /**
  * Implementation of {@link RoleCommandService} to handle {@link SeedRolesCommand}.
@@ -22,11 +22,14 @@ public class RoleCommandServiceImpl implements RoleCommandService {
     }
 
     @Override
-    public void handle(SeedRolesCommand command) {
-        Arrays.stream(Roles.values()).forEach(role -> {
+    public Result<Integer, ApplicationError> handle(SeedRolesCommand command) {
+        int created = 0;
+        for (var role : Roles.values()) {
             if (!roleRepository.existsByName(role)) {
-                roleRepository.save(new Role(Roles.valueOf(role.name())));
+                roleRepository.save(new Role(role));
+                created++;
             }
-        });
+        }
+        return Result.success(created);
     }
 }

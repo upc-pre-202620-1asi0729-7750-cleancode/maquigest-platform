@@ -1,4 +1,6 @@
 package com.maquigest.platform.maintenance.domain.model.aggregates;
+import com.maquigest.platform.maintenance.domain.model.valueobjects.EquipmentId;
+import com.maquigest.platform.maintenance.domain.model.valueobjects.OwnerUserId;
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import com.maquigest.platform.maintenance.domain.model.valueobjects.IncidentStatus;
 import com.maquigest.platform.maintenance.domain.model.events.*;
@@ -6,7 +8,9 @@ import java.time.Instant;
 import java.util.Objects;
 import com.maquigest.platform.maintenance.domain.model.valueobjects.NotificationType;
 public final class Incident extends AbstractDomainAggregateRoot<Incident> {
-    private final Long id, equipmentId, ownerUserId;
+    private final Long id;
+    private final EquipmentId equipmentId;
+    private final OwnerUserId ownerUserId;
     private final String description;
     private final Instant reportedAt;
     private boolean blocksRental;
@@ -15,8 +19,8 @@ public final class Incident extends AbstractDomainAggregateRoot<Incident> {
     public Incident(Long id,Long equipmentId,Long ownerUserId,String description,Instant reportedAt,
                     boolean blocksRental, IncidentStatus status, Instant resolvedAt) {
         if(id!=null&&id<=0)throw new IllegalArgumentException("Incident id must be positive");
-        this.id=id;this.equipmentId=positive(equipmentId,"equipmentId");
-        this.ownerUserId=positive(ownerUserId,"ownerUserId");
+        this.id=id;this.equipmentId=new EquipmentId(equipmentId);
+        this.ownerUserId=new OwnerUserId(ownerUserId);
         if(description==null||description.isBlank()||description.trim().length()>3000)
             throw new IllegalArgumentException("Incident description is required (max 3000)");
         this.description=description.trim();
@@ -28,7 +32,6 @@ public final class Incident extends AbstractDomainAggregateRoot<Incident> {
             throw new IllegalArgumentException("Incident status and resolution date disagree");
         if(resolvedAt!=null&&resolvedAt.isBefore(reportedAt))throw new IllegalArgumentException("Resolution precedes report");
     }
-    private static Long positive(Long id,String name){if(id==null||id<=0)throw new IllegalArgumentException(name+" must be positive");return id;}
     public static Incident report(Long equipmentId,Long ownerUserId,String description,boolean blocksRental,Instant at){
         var result=new Incident(null,equipmentId,ownerUserId,description,at,blocksRental,IncidentStatus.OPEN,null);
         result.registerDomainEvent(new IncidentReportedEvent(equipmentId,blocksRental)); return result;
@@ -42,10 +45,10 @@ public final class Incident extends AbstractDomainAggregateRoot<Incident> {
         if(status!=IncidentStatus.OPEN)throw new IllegalStateException("Incident already resolved");
         if(at==null||at.isBefore(reportedAt))throw new IllegalArgumentException("Invalid resolution timestamp");
         status=IncidentStatus.RESOLVED;resolvedAt=at;
-        registerDomainEvent(new IncidentResolvedEvent(id,equipmentId));
+        registerDomainEvent(new IncidentResolvedEvent(id,equipmentId.value()));
     }
-    public Long getId(){return id;} public Long getEquipmentId(){return equipmentId;}
-    public Long getOwnerUserId(){return ownerUserId;} public String getDescription(){return description;}
+    public Long getId(){return id;} public Long getEquipmentId(){return equipmentId.value();}
+    public Long getOwnerUserId(){return ownerUserId.value();} public String getDescription(){return description;}
     public Instant getReportedAt(){return reportedAt;} public boolean isBlocksRental(){return blocksRental;}
     public IncidentStatus getStatus(){return status;} public Instant getResolvedAt(){return resolvedAt;}
     /** Register a local notification fact after persistence assigns the identity. */
@@ -53,8 +56,8 @@ public final class Incident extends AbstractDomainAggregateRoot<Incident> {
         if (persistedId == null || persistedId < 1 || (id != null && !id.equals(persistedId)))
             throw new IllegalArgumentException("Invalid persisted aggregate id");
         if (domainEvents().stream().anyMatch(IncidentReportedEvent.class::isInstance))
-            registerDomainEvent(new MaintenanceNotificationRequestedEvent(persistedId, ownerUserId, NotificationType.INCIDENT_REPORTED));
+            registerDomainEvent(new MaintenanceNotificationRequestedEvent(persistedId, ownerUserId.value(), NotificationType.INCIDENT_REPORTED));
         if (domainEvents().stream().anyMatch(IncidentResolvedEvent.class::isInstance))
-            registerDomainEvent(new MaintenanceNotificationRequestedEvent(persistedId, ownerUserId, NotificationType.INCIDENT_RESOLVED));
+            registerDomainEvent(new MaintenanceNotificationRequestedEvent(persistedId, ownerUserId.value(), NotificationType.INCIDENT_RESOLVED));
     }
 }

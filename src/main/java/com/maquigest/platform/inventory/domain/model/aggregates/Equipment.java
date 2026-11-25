@@ -4,7 +4,9 @@ import com.maquigest.platform.inventory.domain.model.commands.CreateEquipmentCom
 import com.maquigest.platform.inventory.domain.model.commands.UpdateEquipmentCommand;
 import com.maquigest.platform.inventory.domain.model.entities.AvailabilityBlock;
 import com.maquigest.platform.inventory.domain.model.valueobjects.EquipmentStatus;
+import com.maquigest.platform.inventory.domain.model.valueobjects.EquipmentCode;
 import com.maquigest.platform.inventory.domain.model.valueobjects.RentalRate;
+import com.maquigest.platform.inventory.domain.model.valueobjects.UserId;
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import com.maquigest.platform.inventory.domain.model.events.EquipmentCreatedEvent;
 import com.maquigest.platform.inventory.domain.model.events.EquipmentStatusChangedEvent;
@@ -16,8 +18,8 @@ import java.util.List;
 /** Consistency boundary for equipment information, operational status and calendar blocks. */
 public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
     private Long id;
-    private final Long userId;
-    private String code;
+    private final UserId userId;
+    private EquipmentCode code;
     private String name;
     private String description;
     private Long categoryId;
@@ -28,7 +30,7 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
 
     public Equipment(CreateEquipmentCommand command) {
         if (command == null) throw new IllegalArgumentException("CreateEquipmentCommand is required");
-        this.userId = positive(command.userId(), "userId");
+        this.userId = new UserId(command.userId());
         updateFields(command.code(), command.name(), command.description(), command.categoryId(),
             command.location(), new RentalRate(command.dailyRate(), command.weeklyRate()));
         this.status = EquipmentStatus.AVAILABLE;
@@ -61,7 +63,7 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
     }
     private void updateFields(String code, String name, String description, Long categoryId,
         String location, RentalRate rentalRate) {
-        this.code = required(code, "code", 60);
+        this.code = new EquipmentCode(code);
         this.name = required(name, "name", 180);
         this.description = required(description, "description", 3000);
         this.categoryId = positive(categoryId, "categoryId");
@@ -87,7 +89,7 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
         if (block.isActive() && availabilityBlocks.stream().anyMatch(existing -> existing.isActive() && existing.overlaps(block.getStartDate(), block.getEndDate()))) {
             throw new IllegalArgumentException("Equipment availability blocks cannot overlap");
         }
-        availabilityBlocks.add(block);
+        availabilityBlocks.add(copyBlock(block));
     }
     private static void validatePeriod(LocalDate from, LocalDate to) {
         if (from == null || to == null || to.isBefore(from)) {
@@ -126,25 +128,33 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
         };
         if (!allowed) throw new IllegalStateException("Equipment operational status transition is not allowed");
         this.status = nextStatus;
-        if (id != null) registerDomainEvent(new EquipmentStatusChangedEvent(id, userId));
+        if (id != null) registerDomainEvent(new EquipmentStatusChangedEvent(id, userId.value()));
     }
     public void onCreated() {
         if (id == null) throw new IllegalStateException("Persist equipment before publishing creation");
-        registerDomainEvent(new EquipmentCreatedEvent(id, userId));
+        registerDomainEvent(new EquipmentCreatedEvent(id, userId.value()));
     }
     public Long getId() { return id; }
-    public Long getUserId() { return userId; }
-    public String getCode() { return code; }
+    public Long getUserId() { return userId.value(); }
+    public String getCode() { return code.value(); }
     public String getName() { return name; }
     public String getDescription() { return description; }
     public Long getCategoryId() { return categoryId; }
     public String getLocation() { return location; }
     public RentalRate getRentalRate() { return rentalRate; }
     public EquipmentStatus getStatus() { return status; }
+    private static AvailabilityBlock copyBlock(AvailabilityBlock block) {
+        return new AvailabilityBlock(block.getId(), block.getStartDate(),
+            block.getEndDate(), block.getReleasedAt());
+    }
+
     /** Public availability is only affected by active reservations. */
     public List<AvailabilityBlock> getAvailabilityBlocks() {
-        return availabilityBlocks.stream().filter(AvailabilityBlock::isActive).toList();
+        return availabilityBlocks.stream().filter(AvailabilityBlock::isActive)
+            .map(Equipment::copyBlock).toList();
     }
     /** Infrastructure uses this list to persist the released reservations as history. */
-    public List<AvailabilityBlock> getAllAvailabilityBlocks() { return List.copyOf(availabilityBlocks); }
+    public List<AvailabilityBlock> getAllAvailabilityBlocks() {
+        return availabilityBlocks.stream().map(Equipment::copyBlock).toList();
+    }
 }

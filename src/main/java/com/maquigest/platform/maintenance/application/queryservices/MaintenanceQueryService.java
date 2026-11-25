@@ -8,7 +8,7 @@ public interface MaintenanceQueryService {
     Optional<Incident> handle(GetIncidentByIdQuery query);
     List<Maintenance> handle(GetMaintenancesQuery query);
     Optional<Maintenance> handle(GetMaintenanceByIdQuery query);
-    List<MaintenanceActivity> activities(Long maintenanceId,Long actorUserId);
+    List<MaintenanceActivity> handle(GetMaintenanceActivitiesQuery query);
     EquipmentHistory handle(GetEquipmentHistoryQuery query);
     record HistoryEntry(Long id,String kind,java.time.Instant occurredAt,String description,String status) { }
     record EquipmentHistory(Long equipmentId,String equipmentCode,String equipmentName,List<HistoryEntry> entries) { }

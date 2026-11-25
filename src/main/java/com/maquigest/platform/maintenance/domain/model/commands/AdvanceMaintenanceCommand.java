@@ -2,5 +2,7 @@ package com.maquigest.platform.maintenance.domain.model.commands;
 import java.time.Instant;
 import com.maquigest.platform.maintenance.domain.model.valueobjects.*;
 public record AdvanceMaintenanceCommand(Long maintenanceId,MaintenanceStatus status,String technician,boolean acknowledge,String notes) {
-
+    public AdvanceMaintenanceCommand {
+        if (maintenanceId == null || maintenanceId <= 0) throw new IllegalArgumentException("maintenanceId must be positive");
+    }
 }

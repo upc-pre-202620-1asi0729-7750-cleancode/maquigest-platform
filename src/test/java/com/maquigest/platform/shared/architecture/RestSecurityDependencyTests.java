@@ -2,14 +2,14 @@ package com.maquigest.platform.shared.architecture;
 
 import com.maquigest.platform.iam.interfaces.acl.IamActorFacade;
 import com.maquigest.platform.inventory.interfaces.rest.EquipmentController;
-import com.maquigest.platform.maintenance.interfaces.rest.IncidentController;
-import com.maquigest.platform.maintenance.interfaces.rest.MaintenanceController;
-import com.maquigest.platform.profiles.interfaces.rest.CompanyProfileController;
-import com.maquigest.platform.rentals.interfaces.rest.DeliveryController;
-import com.maquigest.platform.rentals.interfaces.rest.EquipmentReturnController;
-import com.maquigest.platform.rentals.interfaces.rest.RentalController;
-import com.maquigest.platform.rentals.interfaces.rest.RentalRequestController;
-import com.maquigest.platform.subscriptions.interfaces.rest.UserSubscriptionController;
+import com.maquigest.platform.maintenance.interfaces.rest.IncidentsController;
+import com.maquigest.platform.maintenance.interfaces.rest.MaintenancesController;
+import com.maquigest.platform.profiles.interfaces.rest.CompanyProfilesController;
+import com.maquigest.platform.rentals.interfaces.rest.DeliveriesController;
+import com.maquigest.platform.rentals.interfaces.rest.EquipmentReturnsController;
+import com.maquigest.platform.rentals.interfaces.rest.RentalsController;
+import com.maquigest.platform.rentals.interfaces.rest.RentalRequestsController;
+import com.maquigest.platform.subscriptions.interfaces.rest.UserSubscriptionsController;
 import com.maquigest.platform.inventory.interfaces.rest.security.InventoryOwnershipPolicy;
 import com.maquigest.platform.maintenance.interfaces.rest.security.MaintenanceActorPolicy;
 import com.maquigest.platform.profiles.interfaces.rest.security.ProfileOwnershipPolicy;
@@ -27,14 +27,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class RestSecurityDependencyTests {
     private static final List<Class<?>> REST_CONTROLLERS = List.of(
         EquipmentController.class,
-        IncidentController.class,
-        MaintenanceController.class,
-        CompanyProfileController.class,
-        DeliveryController.class,
-        EquipmentReturnController.class,
-        RentalController.class,
-        RentalRequestController.class,
-        UserSubscriptionController.class
+        IncidentsController.class,
+        MaintenancesController.class,
+        CompanyProfilesController.class,
+        DeliveriesController.class,
+        EquipmentReturnsController.class,
+        RentalsController.class,
+        RentalRequestsController.class,
+        UserSubscriptionsController.class
     );
     private static final List<Class<?>> ACTOR_RESOLVERS = List.of(
         InventoryOwnershipPolicy.class,

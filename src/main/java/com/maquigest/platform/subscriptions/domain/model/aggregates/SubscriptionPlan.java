@@ -2,6 +2,7 @@ package com.maquigest.platform.subscriptions.domain.model.aggregates;
 
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.PlanStatus;
+import com.maquigest.platform.subscriptions.domain.model.valueobjects.BillingCycle;
 import java.math.BigDecimal;
 import java.util.Objects;
 
@@ -11,7 +12,7 @@ public final class SubscriptionPlan extends AbstractDomainAggregateRoot<Subscrip
     private final String name;
     private final String description;
     private final com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionPrice price;
-    private final String billingCycle;
+    private final BillingCycle billingCycle;
     private final PlanStatus status;
 
     public SubscriptionPlan(Long id, String name, String description, BigDecimal priceAmount,
@@ -22,7 +23,7 @@ public final class SubscriptionPlan extends AbstractDomainAggregateRoot<Subscrip
         this.description = required(description, "description");
         this.price = new com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionPrice(
             priceAmount, priceCurrency);
-        this.billingCycle = required(billingCycle, "billingCycle");
+        this.billingCycle = new BillingCycle(billingCycle);
         this.status = Objects.requireNonNull(status, "status");
     }
     private static String required(String value, String field) {
@@ -35,6 +36,6 @@ public final class SubscriptionPlan extends AbstractDomainAggregateRoot<Subscrip
     public String getDescription() { return description; }
     public BigDecimal getPriceAmount() { return price.amount(); }
     public String getPriceCurrency() { return price.currency(); }
-    public String getBillingCycle() { return billingCycle; }
+    public String getBillingCycle() { return billingCycle.value(); }
     public PlanStatus getStatus() { return status; }
 }
