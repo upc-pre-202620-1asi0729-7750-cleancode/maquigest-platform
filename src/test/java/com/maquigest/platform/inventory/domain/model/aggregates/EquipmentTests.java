@@ -5,6 +5,7 @@ import com.maquigest.platform.inventory.domain.model.valueobjects.EquipmentStatu
 import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 class EquipmentTests {
@@ -37,6 +38,50 @@ class EquipmentTests {
         asset.changeOperationalStatus(EquipmentStatus.MAINTENANCE);
         assertFalse(asset.isAvailableFor(LocalDate.parse("2026-11-15"),LocalDate.parse("2026-11-16")));
         assertFalse(asset.canBeDeleted());
+    }
+    @Test void addedBlockCannotBeReleasedThroughOriginalReference() {
+        var asset = new Equipment(newCommand());
+        var from = LocalDate.parse("2026-11-10");
+        var to = from.plusDays(2);
+        var block = new AvailabilityBlock(8L, from, to);
+        asset.addAvailabilityBlock(block);
+        block.release(Instant.parse("2026-11-09T12:00:00Z"));
+        assertFalse(asset.isAvailableFor(from, to));
+        assertTrue(asset.getAllAvailabilityBlocks().getFirst().isActive());
+    }
+    @Test void returnedBlocksCannotBypassRentedStatusGuard() {
+        var asset = new Equipment(newCommand());
+        var from = LocalDate.parse("2026-11-10");
+        var to = from.plusDays(2);
+        var releasedAt = Instant.parse("2026-11-13T12:00:00Z");
+        asset.addAvailabilityBlock(new AvailabilityBlock(8L, from, to));
+        asset.changeOperationalStatus(EquipmentStatus.RENTED);
+        asset.getAvailabilityBlocks().getFirst().release(releasedAt);
+        asset.getAllAvailabilityBlocks().getFirst().release(releasedAt);
+        assertThrows(IllegalStateException.class, () -> asset.releaseAvailabilityBlock(8L, releasedAt));
+        assertEquals(1, asset.getAvailabilityBlocks().size());
+        assertNull(asset.getAllAvailabilityBlocks().getFirst().getReleasedAt());
+        asset.changeOperationalStatus(EquipmentStatus.AVAILABLE);
+        asset.releaseAvailabilityBlock(8L, releasedAt);
+        assertTrue(asset.isAvailableFor(from, to));
+        assertEquals(releasedAt, asset.getAllAvailabilityBlocks().getFirst().getReleasedAt());
+        assertTrue(asset.getAvailabilityBlocks().isEmpty());
+        assertThrows(UnsupportedOperationException.class, () -> asset.getAllAvailabilityBlocks().clear());
+    }
+    @Test void reconstitutedBlocksAreDetachedAndPreserveHistory() {
+        var from = LocalDate.parse("2026-11-10");
+        var to = from.plusDays(2);
+        var releasedAt = Instant.parse("2026-11-09T12:00:00Z");
+        var historical = new AvailabilityBlock(7L, from, to, releasedAt);
+        var active = new AvailabilityBlock(8L, from, to);
+        var asset = Equipment.reconstitute(5L, 1L, "X", "Excavadora", "Desc", 1L, "Lima",
+            new com.maquigest.platform.inventory.domain.model.valueobjects.RentalRate(BigDecimal.ONE, BigDecimal.TEN),
+            EquipmentStatus.AVAILABLE, List.of(historical, active));
+        active.release(releasedAt);
+        assertFalse(asset.isAvailableFor(from, to));
+        assertEquals(2, asset.getAllAvailabilityBlocks().size());
+        assertEquals(releasedAt, asset.getAllAvailabilityBlocks().getFirst().getReleasedAt());
+        assertEquals(8L, asset.getAvailabilityBlocks().getFirst().getId());
     }
     @Test void patchLeavesOwnerStatusAndBlocksUnchanged() {
         var asset=Equipment.reconstitute(5L,1L,"X","Old name","Desc",1L,"Lima",

@@ -87,7 +87,7 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
         if (block.isActive() && availabilityBlocks.stream().anyMatch(existing -> existing.isActive() && existing.overlaps(block.getStartDate(), block.getEndDate()))) {
             throw new IllegalArgumentException("Equipment availability blocks cannot overlap");
         }
-        availabilityBlocks.add(block);
+        availabilityBlocks.add(copyBlock(block));
     }
     private static void validatePeriod(LocalDate from, LocalDate to) {
         if (from == null || to == null || to.isBefore(from)) {
@@ -141,10 +141,18 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
     public String getLocation() { return location; }
     public RentalRate getRentalRate() { return rentalRate; }
     public EquipmentStatus getStatus() { return status; }
+    private static AvailabilityBlock copyBlock(AvailabilityBlock block) {
+        return new AvailabilityBlock(block.getId(), block.getStartDate(),
+            block.getEndDate(), block.getReleasedAt());
+    }
+
     /** Public availability is only affected by active reservations. */
     public List<AvailabilityBlock> getAvailabilityBlocks() {
-        return availabilityBlocks.stream().filter(AvailabilityBlock::isActive).toList();
+        return availabilityBlocks.stream().filter(AvailabilityBlock::isActive)
+            .map(Equipment::copyBlock).toList();
     }
     /** Infrastructure uses this list to persist the released reservations as history. */
-    public List<AvailabilityBlock> getAllAvailabilityBlocks() { return List.copyOf(availabilityBlocks); }
+    public List<AvailabilityBlock> getAllAvailabilityBlocks() {
+        return availabilityBlocks.stream().map(Equipment::copyBlock).toList();
+    }
 }

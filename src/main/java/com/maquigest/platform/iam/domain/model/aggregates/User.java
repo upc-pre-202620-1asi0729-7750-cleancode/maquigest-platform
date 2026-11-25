@@ -75,6 +75,11 @@ public class User extends AbstractDomainAggregateRoot<User> {
         status = UserStatus.ACTIVE;
     }
 
+    /** Read-only snapshot; roles can only be added through the aggregate. */
+    public Set<Role> getRoles() {
+        return Set.copyOf(roles);
+    }
+
     public User addRole(Role role) {
         if (role == null || role.getName() == null) {
             throw new IllegalArgumentException("role is required");
