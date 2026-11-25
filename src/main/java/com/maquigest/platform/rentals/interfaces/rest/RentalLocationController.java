@@ -1,4 +1,7 @@
 package com.maquigest.platform.rentals.interfaces.rest;
+import com.maquigest.platform.shared.application.result.ApplicationError;
+import com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler;
+
 
 import com.maquigest.platform.rentals.application.exceptions.GeographicLookupException;
 import com.maquigest.platform.rentals.application.queryservices.RentalLocationQueryService;
@@ -39,18 +42,11 @@ public class RentalLocationController {
     }
     @ExceptionHandler(GeographicLookupException.class)
     public ResponseEntity<ProblemDetail> handle(GeographicLookupException failure) {
-        var status = switch (failure.code()) {
-            case INVALID -> HttpStatus.BAD_REQUEST;
-            case FORBIDDEN -> HttpStatus.FORBIDDEN;
-            case NOT_FOUND, NO_RESULTS -> HttpStatus.NOT_FOUND;
-            case UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
-        };
         var code = "RENTAL_LOCATION_" + failure.code().name();
         var locale = "es".equals(LocaleContextHolder.getLocale().getLanguage()) ? Locale.forLanguageTag("es") : Locale.ENGLISH;
         var bundle = ResourceBundle.getBundle("rental-locations", locale, ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES));
-        var problem = ProblemDetail.forStatusAndDetail(status, bundle.getString(code));
-        problem.setTitle(bundle.getString(code + ".title"));
-        problem.setProperty("code", code);
-        return ResponseEntity.status(status).cacheControl(CacheControl.noStore()).body(problem);
+        var problem = ProblemDetailFromApplicationErrorAssembler.toProblemDetailFromApplicationError(
+                new ApplicationError(code, bundle.getString(code)), bundle.getString(code + ".title"));
+        return ResponseEntity.status(problem.getStatus()).cacheControl(CacheControl.noStore()).body(problem);
     }
 }

@@ -71,9 +71,8 @@ public class CompanyProfileController {
             CompanyProfileResourceFromEntityAssembler::toResourceFromEntity,HttpStatus.OK);
     }
     private static ResponseEntity<ProblemDetail> forbidden(){
-        var body=ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
-            "Only the authenticated company may create or update its own profile");
-        body.setTitle("Forbidden");body.setProperty("code","PROFILE_FORBIDDEN");
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                new ApplicationError("PROFILE_FORBIDDEN", "Only the authenticated company may create or update its own profile"),
+                "Forbidden");
     }
 }

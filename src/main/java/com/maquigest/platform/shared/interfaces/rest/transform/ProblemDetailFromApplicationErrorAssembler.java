@@ -35,14 +35,18 @@ public final class ProblemDetailFromApplicationErrorAssembler {
      */
     public static ProblemDetail toProblemDetailFromApplicationError(ApplicationError error) {
         HttpStatusCode status = toStatusFromErrorCode(error.code());
-        String localizedMessage = toLocalizedMessageFromApplicationError(error);
+        // Never pass technical server-error details to a message template or response.
+        boolean unexpected = status.value() == 500;
+        String localizedMessage = unexpected
+                ? toLocalizedMessageWithFallback("error.unexpected.message", "Unexpected error")
+                : toLocalizedMessageFromApplicationError(error);
 
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, localizedMessage);
+        ProblemDetail problemDetail = createProblem(status, error.code(), localizedMessage, toProblemTitle(error.code(), status));
         problemDetail.setType(toProblemTypeUri(error.code()));
-        problemDetail.setTitle(toProblemTitle(error.code(), status));
-        problemDetail.setProperty("code", error.code());
 
-        if (error.details() != null && !error.details().isBlank()) {
+        if (unexpected) {
+            problemDetail.setProperty("details", "An unexpected error occurred");
+        } else if (error.details() != null && !error.details().isBlank()) {
             problemDetail.setProperty("details", error.details());
         }
 
@@ -58,6 +62,30 @@ public final class ProblemDetailFromApplicationErrorAssembler {
     public static ResponseEntity<ProblemDetail> toResponseFromApplicationError(ApplicationError error) {
         ProblemDetail problemDetail = toProblemDetailFromApplicationError(error);
         return ResponseEntity.status(problemDetail.getStatus()).body(problemDetail);
+    }
+
+    /**
+     * Preserve the published about:blank contract of context-specific errors.
+     * The boundary resolves the existing localized detail and title before assembly.
+     */
+    public static ProblemDetail toProblemDetailFromApplicationError(ApplicationError error, String title) {
+        HttpStatusCode status = toStatusFromErrorCode(error.code());
+        if (status.value() == 500) {
+            return toProblemDetailFromApplicationError(error);
+        }
+        return createProblem(status, error.code(), error.message(), title);
+    }
+
+    public static ResponseEntity<ProblemDetail> toResponseFromApplicationError(ApplicationError error, String title) {
+        var problem = toProblemDetailFromApplicationError(error, title);
+        return ResponseEntity.status(problem.getStatus()).body(problem);
+    }
+
+    private static ProblemDetail createProblem(HttpStatusCode status, String code, String detail, String title) {
+        var problem = ProblemDetail.forStatusAndDetail(status, detail);
+        problem.setTitle(title);
+        problem.setProperty("code", code);
+        return problem;
     }
 
     private static URI toProblemTypeUri(String errorCode) {
@@ -166,6 +194,8 @@ public final class ProblemDetailFromApplicationErrorAssembler {
      */
     public static HttpStatusCode toStatusFromErrorCode(String errorCode) {
         return switch (errorCode) {
+            case "CHECKOUT_UNAVAILABLE", "CHECKOUT_PROVIDER", "RENTAL_LOCATION_UNAVAILABLE" -> HttpStatus.SERVICE_UNAVAILABLE;
+            case "RENTAL_LOCATION_NO_RESULTS" -> HttpStatus.NOT_FOUND;
             case "VALIDATION_ERROR" -> HttpStatus.BAD_REQUEST;
             case String s when s.endsWith("_INVALID") || s.endsWith("_VALIDATION_ERROR") -> HttpStatus.BAD_REQUEST;
             case String s when s.endsWith("_FORBIDDEN") -> HttpStatus.FORBIDDEN;

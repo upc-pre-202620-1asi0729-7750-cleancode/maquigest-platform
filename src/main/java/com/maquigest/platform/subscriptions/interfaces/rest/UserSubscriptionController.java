@@ -103,9 +103,8 @@ public class UserSubscriptionController {
             new ApplicationError("SUBSCRIPTION_FORBIDDEN", "Only an active authenticated account may read its subscriptions"));
     }
     private static ResponseEntity<ProblemDetail> forbidden() {
-        var problem=ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
-            "Only the authenticated rental company may manage its own subscription");
-        problem.setTitle("Forbidden");problem.setProperty("code","SUBSCRIPTION_FORBIDDEN");
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
+        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                new ApplicationError("SUBSCRIPTION_FORBIDDEN", "Only the authenticated rental company may manage its own subscription"),
+                "Forbidden");
     }
 }

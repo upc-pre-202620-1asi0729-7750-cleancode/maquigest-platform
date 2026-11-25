@@ -1,11 +1,14 @@
 package com.maquigest.platform.subscriptions.interfaces.rest;
+import com.maquigest.platform.shared.application.result.ApplicationError;
+import com.maquigest.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler;
+
 import com.maquigest.platform.subscriptions.application.commandservices.*;
 import com.maquigest.platform.subscriptions.domain.model.commands.*;
 import com.maquigest.platform.subscriptions.interfaces.rest.resources.CreateSubscriptionCheckoutResource;
 import com.maquigest.platform.subscriptions.interfaces.rest.security.SubscriptionOwnershipPolicy;
 import com.maquigest.platform.subscriptions.interfaces.rest.transform.SubscriptionCheckoutResourceAssembler;
 import com.maquigest.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
-import static com.maquigest.platform.subscriptions.application.commandservices.CheckoutFailure.Code.*;
+import static com.maquigest.platform.subscriptions.application.commandservices.CheckoutFailure.Code.FORBIDDEN;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.*;
@@ -40,8 +43,10 @@ public class SubscriptionCheckoutController {
         return ResponseEntity.noContent().build();
     }
     @ExceptionHandler(CheckoutFailure.class) public ResponseEntity<ProblemDetail> error(CheckoutFailure e){
-        var status=switch(e.code()){case UNAVAILABLE,PROVIDER->HttpStatus.SERVICE_UNAVAILABLE;case FORBIDDEN->HttpStatus.FORBIDDEN;case NOT_FOUND->HttpStatus.NOT_FOUND;case CONFLICT->HttpStatus.CONFLICT;case INVALID->HttpStatus.BAD_REQUEST;};
-        var problem=ProblemDetail.forStatusAndDetail(status,messages.getMessage("subscriptions.checkout."+e.code().name().toLowerCase(java.util.Locale.ROOT),null,LocaleContextHolder.getLocale()));
-        problem.setProperty("code","CHECKOUT_"+e.code().name());return ResponseEntity.status(status).body(problem);
+        var code = e.toApplicationError().code();
+        var status = ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(code);
+        var detail = messages.getMessage("subscriptions.checkout."+e.code().name().toLowerCase(java.util.Locale.ROOT),null,LocaleContextHolder.getLocale());
+        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                new ApplicationError(code, detail), HttpStatus.valueOf(status.value()).getReasonPhrase());
     }
 }

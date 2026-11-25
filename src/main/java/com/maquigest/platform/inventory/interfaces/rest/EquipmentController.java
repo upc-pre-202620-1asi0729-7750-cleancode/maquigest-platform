@@ -139,10 +139,8 @@ public class EquipmentController {
     }
 
     private static ResponseEntity<ProblemDetail> forbidden() {
-        var problem=ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
-            "Only the authenticated rental company that owns the equipment may modify it");
-        problem.setTitle("Forbidden");
-        problem.setProperty("code","EQUIPMENT_FORBIDDEN");
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
+        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                new ApplicationError("EQUIPMENT_FORBIDDEN", "Only the authenticated rental company that owns the equipment may modify it"),
+                "Forbidden");
     }
 }
