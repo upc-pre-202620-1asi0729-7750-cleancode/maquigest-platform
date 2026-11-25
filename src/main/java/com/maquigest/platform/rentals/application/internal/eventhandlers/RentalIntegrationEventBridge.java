@@ -1,4 +1,4 @@
-package com.maquigest.platform.rentals.infrastructure.events;
+package com.maquigest.platform.rentals.application.internal.eventhandlers;
 import com.maquigest.platform.rentals.interfaces.events.RentalIntegrationEvent;
 import com.maquigest.platform.rentals.domain.model.events.*;
 import java.time.Instant;

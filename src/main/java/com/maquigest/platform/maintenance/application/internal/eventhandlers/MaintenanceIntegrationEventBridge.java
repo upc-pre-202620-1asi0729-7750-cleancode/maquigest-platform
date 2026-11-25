@@ -1,4 +1,4 @@
-package com.maquigest.platform.maintenance.infrastructure.events;
+package com.maquigest.platform.maintenance.application.internal.eventhandlers;
 import com.maquigest.platform.maintenance.interfaces.events.MaintenanceIntegrationEvent;
 import com.maquigest.platform.maintenance.domain.model.events.*;
 import java.time.Instant;
