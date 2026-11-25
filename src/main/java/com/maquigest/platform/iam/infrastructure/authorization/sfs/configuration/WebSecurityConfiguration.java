@@ -84,7 +84,9 @@ public class WebSecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/v1/equipment-categories").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/authentication/sign-up",
-                                "/api/v1/authentication/sign-in").permitAll()
+                                "/api/v1/authentication/sign-in",
+                                "/api/v1/authentication/password-recovery",
+                                "/api/v1/authentication/reset-password").permitAll()
                         .requestMatchers(
                                 "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html",
                                 "/swagger-ui/**", "/swagger-resources/**", "/webjars/**",
