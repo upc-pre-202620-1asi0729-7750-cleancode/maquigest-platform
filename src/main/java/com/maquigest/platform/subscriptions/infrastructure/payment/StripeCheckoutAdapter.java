@@ -27,7 +27,7 @@ public class StripeCheckoutAdapter implements StripeCheckoutPort {
             @Value("${STRIPE_SECRET_KEY:}") String key,@Value("${STRIPE_WEBHOOK_SECRET:}") String webhookSecret,
             @Value("${MAQUIGEST_WEBAPP_BASE_URL:http://localhost:4200}") String baseUrl,ObjectMapper mapper) {
         this.enabled=enabled;this.key=key;this.webhookSecret=webhookSecret;this.baseUrl=baseUrl.replaceAll("/+$","");this.mapper=mapper;
-        if (enabled && (!key.startsWith("sk_test_") || !webhookSecret.startsWith("whsec_") || !this.baseUrl.matches("https://[A-Za-z0-9.-]+(?::[0-9]+)?|http://localhost:[0-9]+")))
+        if (enabled && (!key.matches("(?:sk_test_|rkcs_test_)[A-Za-z0-9_]+") || !webhookSecret.startsWith("whsec_") || !this.baseUrl.matches("https://[A-Za-z0-9.-]+(?::[0-9]+)?|http://localhost:[0-9]+")))
             throw new IllegalStateException("Stripe test configuration incomplete");
         var factory=new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build());
         factory.setReadTimeout(Duration.ofSeconds(10));
