@@ -36,8 +36,15 @@ public class StripeCheckoutAdapter implements StripeCheckoutPort {
     public boolean isEnabled(){return enabled;}
     public Session create(SubscriptionCheckout c) {
         if(!enabled) throw new CheckoutFailure(UNAVAILABLE);
+        var form=checkoutForm(c);
+        try {
+            return parse(client.post().uri("/v1/checkout/sessions").headers(h->{h.setBearerAuth(key);h.set("Idempotency-Key",c.getReference());})
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED).body(form).retrieve().body(Map.class));
+        } catch(RuntimeException e){throw new CheckoutFailure(PROVIDER);}
+    }
+    LinkedMultiValueMap<String,String> checkoutForm(SubscriptionCheckout c) {
         var form=new LinkedMultiValueMap<String,String>();
-        form.add("mode","payment");form.add("payment_method_types[]","card");
+        form.add("mode","payment");form.add("allowed_payment_method_types[]","card");
         form.add("adaptive_pricing[enabled]","false");
         form.add("line_items[0][price_data][currency]","pen");
         form.add("line_items[0][price_data][product_data][name]","MaquiGest monthly plan "+c.getPlanId());
@@ -47,10 +54,7 @@ public class StripeCheckoutAdapter implements StripeCheckoutPort {
         form.add("expires_at",Long.toString(c.getExpiresAt().getEpochSecond()));
         var returnUrl=baseUrl+"/subscriptions/plans?checkout="+c.getReference();
         form.add("success_url",returnUrl);form.add("cancel_url",returnUrl);
-        try {
-            return parse(client.post().uri("/v1/checkout/sessions").headers(h->{h.setBearerAuth(key);h.set("Idempotency-Key",c.getReference());})
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED).body(form).retrieve().body(Map.class));
-        } catch(RuntimeException e){throw new CheckoutFailure(PROVIDER);}
+        return form;
     }
     public Session retrieve(String id) {
         if(!enabled)throw new CheckoutFailure(UNAVAILABLE);
