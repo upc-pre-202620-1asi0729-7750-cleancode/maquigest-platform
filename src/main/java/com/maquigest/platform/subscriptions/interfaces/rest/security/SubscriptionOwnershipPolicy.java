@@ -23,6 +23,15 @@ public class SubscriptionOwnershipPolicy {
             .map(IamActorFacade.ActorSnapshot::userId);
     }
 
+    /** Read access is scoped to the active principal, including non-subscribers. */
+    public Optional<Long> authenticatedReaderId(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() || authentication.getName() == null) {
+            return Optional.empty();
+        }
+        return actors.findActiveByEmail(authentication.getName())
+            .map(IamActorFacade.ActorSnapshot::userId);
+    }
+
     public boolean canManage(Authentication auth, Long userId) {
         return userId != null && authenticatedOwnerId(auth).filter(userId::equals).isPresent();
     }

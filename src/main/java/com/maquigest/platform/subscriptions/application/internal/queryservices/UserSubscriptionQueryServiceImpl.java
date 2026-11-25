@@ -4,6 +4,8 @@ import com.maquigest.platform.subscriptions.application.queryservices.UserSubscr
 import com.maquigest.platform.subscriptions.domain.model.aggregates.UserSubscription;
 import com.maquigest.platform.subscriptions.domain.model.queries.GetAllUserSubscriptionsQuery;
 import com.maquigest.platform.subscriptions.domain.model.queries.GetActiveProviderUserIdsQuery;
+import com.maquigest.platform.subscriptions.domain.model.queries.GetUserSubscriptionsByUserIdQuery;
+import com.maquigest.platform.subscriptions.domain.model.queries.GetUserSubscriptionByIdAndUserIdQuery;
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionStatus;
 import com.maquigest.platform.subscriptions.domain.repositories.UserSubscriptionRepository;
 import org.springframework.stereotype.Service;
@@ -49,6 +51,23 @@ public class UserSubscriptionQueryServiceImpl implements UserSubscriptionQuerySe
             .map(UserSubscription::getUserId)
             .distinct()
             .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserSubscription> handle(GetUserSubscriptionsByUserIdQuery query) {
+        Instant now = Instant.now();
+        return repository.findAllByUserId(query.userId()).stream()
+            .map(subscription -> projectEffectiveStatus(subscription, now))
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UserSubscription> handle(GetUserSubscriptionByIdAndUserIdQuery query) {
+        Instant now = Instant.now();
+        return repository.findByIdAndUserId(query.id(), query.userId())
+            .map(subscription -> projectEffectiveStatus(subscription, now));
     }
 
     /**

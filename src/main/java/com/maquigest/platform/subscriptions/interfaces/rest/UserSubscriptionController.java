@@ -4,8 +4,9 @@ import com.maquigest.platform.shared.interfaces.rest.transform.*;
 import com.maquigest.platform.subscriptions.application.commandservices.UserSubscriptionCommandService;
 import com.maquigest.platform.subscriptions.application.queryservices.UserSubscriptionQueryService;
 import com.maquigest.platform.subscriptions.domain.model.commands.*;
-import com.maquigest.platform.subscriptions.domain.model.queries.GetAllUserSubscriptionsQuery;
 import com.maquigest.platform.subscriptions.domain.model.queries.GetActiveProviderUserIdsQuery;
+import com.maquigest.platform.subscriptions.domain.model.queries.GetUserSubscriptionsByUserIdQuery;
+import com.maquigest.platform.subscriptions.domain.model.queries.GetUserSubscriptionByIdAndUserIdQuery;
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionStatus;
 import com.maquigest.platform.subscriptions.interfaces.rest.security.SubscriptionOwnershipPolicy;
 import com.maquigest.platform.subscriptions.interfaces.rest.resources.CreateUserSubscriptionResource;
@@ -32,9 +33,11 @@ public class UserSubscriptionController {
             UserSubscriptionCommandService commands, SubscriptionOwnershipPolicy ownership) {
         this.queries=queries; this.commands=commands; this.ownership=ownership;
     }
-    @GetMapping @Operation(summary="List subscriptions consumed by WebApp and Inventory ACL")
-    public ResponseEntity<?> getAll() {
-        return ResponseEntity.ok(queries.handle(new GetAllUserSubscriptionsQuery()).stream()
+    @GetMapping @Operation(summary="List subscriptions belonging to the authenticated account")
+    public ResponseEntity<?> getAll(Authentication authentication) {
+        var reader = ownership.authenticatedReaderId(authentication);
+        if (reader.isEmpty()) return readForbidden();
+        return ResponseEntity.ok(queries.handle(new GetUserSubscriptionsByUserIdQuery(reader.get())).stream()
             .map(UserSubscriptionResourceFromEntityAssembler::toResourceFromEntity).toList());
     }
     @GetMapping("/active-provider-user-ids")
@@ -42,9 +45,13 @@ public class UserSubscriptionController {
     public ResponseEntity<java.util.List<Long>> getActiveProviderUserIds() {
         return ResponseEntity.ok(queries.handle(new GetActiveProviderUserIdsQuery()));
     }
-    @GetMapping("/{id}") @Operation(summary="Find a subscription by id")
-    public ResponseEntity<?> getById(@PathVariable Long id) {
-        return queries.findById(id)
+    @GetMapping("/{id}") @Operation(summary="Find an owned subscription by id")
+    public ResponseEntity<?> getById(@PathVariable Long id, Authentication authentication) {
+        var reader = ownership.authenticatedReaderId(authentication);
+        if (reader.isEmpty()) return readForbidden();
+        if (id == null || id <= 0) return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+            ApplicationError.notFound("UserSubscription", String.valueOf(id)));
+        return queries.handle(new GetUserSubscriptionByIdAndUserIdQuery(id, reader.get()))
             .<ResponseEntity<?>>map(s -> ResponseEntity.ok(UserSubscriptionResourceFromEntityAssembler.toResourceFromEntity(s)))
             .orElseGet(() -> ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
                 ApplicationError.notFound("UserSubscription", String.valueOf(id))));
@@ -90,6 +97,10 @@ public class UserSubscriptionController {
         return ResponseEntityAssembler.toResponseEntityFromResult(
             commands.handle(new CancelUserSubscriptionCommand(id,actor.get())),
             UserSubscriptionResourceFromEntityAssembler::toResourceFromEntity,HttpStatus.OK);
+    }
+    private static ResponseEntity<ProblemDetail> readForbidden() {
+        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+            new ApplicationError("SUBSCRIPTION_FORBIDDEN", "Only an active authenticated account may read its subscriptions"));
     }
     private static ResponseEntity<ProblemDetail> forbidden() {
         var problem=ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
