@@ -32,6 +32,13 @@ public class UserRepositoryImpl implements UserRepository {
                 .map(UserPersistenceAssembler::toDomainFromPersistence);
     }
 
+    @Override public Optional<User> findByEmailForUpdate(String email) {
+        return userPersistenceRepository.findByEmailForUpdate(email).map(UserPersistenceAssembler::toDomainFromPersistence);
+    }
+    @Override public Optional<User> findByIdForUpdate(Long id) {
+        return userPersistenceRepository.findByIdForUpdate(id).map(UserPersistenceAssembler::toDomainFromPersistence);
+    }
+
     @Override
     public User save(User user) {
         var entity = UserPersistenceAssembler.toPersistenceFromDomain(user);

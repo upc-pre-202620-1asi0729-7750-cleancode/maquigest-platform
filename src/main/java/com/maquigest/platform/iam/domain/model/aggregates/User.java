@@ -60,6 +60,11 @@ public class User extends AbstractDomainAggregateRoot<User> {
         registerDomainEvent(new IamNotificationRequestedEvent(id, id, NotificationType.ACCOUNT_REGISTERED));
     }
 
+    /** Password hashing is performed by the application hashing port. */
+    public void changePassword(String encodedPassword) {
+        this.password = requireNonBlank(encodedPassword, "password");
+    }
+
     public User addRole(Role role) {
         if (role == null || role.getName() == null) {
             throw new IllegalArgumentException("role is required");
