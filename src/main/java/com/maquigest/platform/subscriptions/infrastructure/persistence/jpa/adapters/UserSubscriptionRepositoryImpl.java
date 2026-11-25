@@ -34,10 +34,12 @@ public class UserSubscriptionRepositoryImpl implements UserSubscriptionRepositor
             // Persist new entitlement on plan changes; the previous implementation saved status only.
             existing.setPlanId(domain.getPlanId());
             var saved = jpa.saveAndFlush(existing);
+            domain.onNotificationPersisted(saved.getId());
             publisher.publishAndClearEvents(domain);
             return UserSubscriptionPersistenceAssembler.toDomain(saved);
         }
         var saved = jpa.saveAndFlush(UserSubscriptionPersistenceAssembler.toPersistence(domain));
+        domain.onNotificationPersisted(saved.getId());
         publisher.publishAndClearEvents(domain);
         return UserSubscriptionPersistenceAssembler.toDomain(saved);
     }

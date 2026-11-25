@@ -37,8 +37,13 @@ public class EquipmentRepositoryImpl implements EquipmentRepository {
                 () -> new IllegalArgumentException("Equipment no longer exists"));
         if (equipment.getId()!=null) EquipmentPersistenceAssembler.copyToExistingPersistence(equipment,entity);
         var saved = persistence.saveAndFlush(entity);
+        var stored = EquipmentPersistenceAssembler.toDomainFromPersistence(saved);
+        if (equipment.getId() == null) {
+            stored.onCreated();
+            publisher.publishAndClearEvents(stored);
+        }
         publisher.publishAndClearEvents(equipment);
-        return EquipmentPersistenceAssembler.toDomainFromPersistence(saved);
+        return stored;
     }
     @Override public boolean existsByUserIdAndCodeIgnoreCase(Long userId,String code) {
         return persistence.existsByUserIdAndCodeIgnoreCase(userId, code);

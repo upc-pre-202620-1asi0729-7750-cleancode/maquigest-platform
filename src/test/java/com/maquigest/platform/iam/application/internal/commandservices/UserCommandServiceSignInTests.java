@@ -23,7 +23,7 @@ class UserCommandServiceSignInTests {
     private final RoleRepository roles = mock(RoleRepository.class);
     private final HashingService hashing = mock(HashingService.class);
     private final TokenService tokens = mock(TokenService.class);
-    private final UserCommandServiceImpl service = new UserCommandServiceImpl(users, hashing, roles, tokens);
+    private final UserCommandServiceImpl service = new UserCommandServiceImpl(users, hashing, roles, tokens, mock(EmailVerificationTransactions.class), false);
 
     private static User user(UserStatus status) {
         return User.reconstitute(42L, "Ada", "Lovelace", "ada@example.com", "stored-bcrypt-hash",

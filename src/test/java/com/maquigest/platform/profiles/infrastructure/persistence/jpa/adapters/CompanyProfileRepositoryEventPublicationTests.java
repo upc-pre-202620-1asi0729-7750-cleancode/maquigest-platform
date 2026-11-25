@@ -36,7 +36,7 @@ class CompanyProfileRepositoryEventPublicationTests {
 
         assertEquals(55L, profile.getId());
         assertEquals(55L, returned.getId());
-        verify(springPublisher, times(1)).publishEvent(new CompanyProfileCreatedEvent(55L, 7L));
+        verify(springPublisher, times(1)).publishEvent(org.mockito.ArgumentMatchers.<Object>argThat(event -> event instanceof CompanyProfileCreatedEvent e && e.profileId().equals(55L) && e.userId().equals(7L) && e.factId() != null && e.occurredAt() != null));
         verifyNoMoreInteractions(springPublisher);
         assertTrue(profile.domainEvents().isEmpty());
     }
@@ -56,7 +56,7 @@ class CompanyProfileRepositoryEventPublicationTests {
 
         adapter.save(profile);
 
-        verify(springPublisher, times(1)).publishEvent(new CompanyProfileUpdatedEvent(55L, 7L));
+        verify(springPublisher, times(1)).publishEvent(org.mockito.ArgumentMatchers.<Object>argThat(event -> event instanceof CompanyProfileUpdatedEvent e && e.profileId().equals(55L) && e.userId().equals(7L) && e.factId() != null && e.occurredAt() != null));
         verifyNoMoreInteractions(springPublisher);
         assertTrue(profile.domainEvents().isEmpty());
     }

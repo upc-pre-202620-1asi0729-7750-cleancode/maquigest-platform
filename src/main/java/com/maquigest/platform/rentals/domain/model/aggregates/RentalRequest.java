@@ -2,6 +2,8 @@ package com.maquigest.platform.rentals.domain.model.aggregates;
 
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import com.maquigest.platform.rentals.domain.model.events.RentalRequestApprovedEvent;
+import com.maquigest.platform.rentals.domain.model.events.RentalRequestCreatedEvent;
+import com.maquigest.platform.rentals.domain.model.events.RentalRequestRejectedEvent;
 import com.maquigest.platform.rentals.domain.model.valueobjects.RentalPeriod;
 import com.maquigest.platform.rentals.domain.model.valueobjects.RentalRequestStatus;
 import java.time.Instant;
@@ -45,7 +47,18 @@ public final class RentalRequest extends AbstractDomainAggregateRoot<RentalReque
             rentalCompanyUserId, period.startDate(), period.endDate()));
     }
 
-    public void reject() { requirePending(); status = RentalRequestStatus.REJECTED; }
+    /** Registers creation only after the persistence identity has been assigned. */
+    public void onCreated() {
+        if (id == null) throw new IllegalStateException("Request must be persisted before creation event");
+        requirePending();
+        registerDomainEvent(new RentalRequestCreatedEvent(id, rentalCompanyUserId, createdAt));
+    }
+
+    public void reject() {
+        requirePending();
+        status = RentalRequestStatus.REJECTED;
+        registerDomainEvent(new RentalRequestRejectedEvent(id, constructionUserId, Instant.now()));
+    }
 
     private void requirePending() {
         if (status != RentalRequestStatus.PENDING)

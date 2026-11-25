@@ -21,7 +21,9 @@ public class IncidentRepositoryImpl implements IncidentRepository {
         var entity=incident.getId()==null?IncidentPersistenceAssembler.toNew(incident):jpa.findById(incident.getId())
             .orElseThrow(()->new IllegalArgumentException("Incident not found"));
         if(incident.getId()!=null)IncidentPersistenceAssembler.copy(incident,entity);
-        var saved=jpa.saveAndFlush(entity);events.publishAndClearEvents(incident);
+        var saved=jpa.saveAndFlush(entity);
+        incident.onNotificationPersisted(saved.getId());
+        events.publishAndClearEvents(incident);
         return IncidentPersistenceAssembler.toDomain(saved);
     }
 }

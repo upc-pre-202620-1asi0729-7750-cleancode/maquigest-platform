@@ -66,4 +66,15 @@ public final class Maintenance extends AbstractDomainAggregateRoot<Maintenance> 
     public Long getOwnerUserId(){return ownerUserId;} public Instant getPerformedAt(){return performedAt;}
     public String getType(){return type;} public MaintenanceStatus getStatus(){return status;}
     public String getTechnician(){return technician;} public Instant getAcknowledgedAt(){return acknowledgedAt;}
+    /** Register a local notification fact after persistence assigns the identity. */
+    public void onNotificationPersisted(Long persistedId) {
+        if (persistedId == null || persistedId < 1 || (id != null && !id.equals(persistedId)))
+            throw new IllegalArgumentException("Invalid persisted aggregate id");
+        boolean created = domainEvents().stream().anyMatch(MaintenanceCreatedEvent.class::isInstance);
+        boolean changed = domainEvents().stream().anyMatch(MaintenanceStatusChangedEvent.class::isInstance);
+        if (created && status == MaintenanceStatus.SCHEDULED)
+            registerDomainEvent(new MaintenanceNotificationRequestedEvent(persistedId, ownerUserId, NotificationType.MAINTENANCE_SCHEDULED));
+        if ((created || changed) && status == MaintenanceStatus.COMPLETED)
+            registerDomainEvent(new MaintenanceNotificationRequestedEvent(persistedId, ownerUserId, NotificationType.MAINTENANCE_COMPLETED));
+    }
 }
