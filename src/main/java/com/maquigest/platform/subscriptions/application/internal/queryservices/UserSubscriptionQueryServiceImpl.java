@@ -3,6 +3,7 @@ package com.maquigest.platform.subscriptions.application.internal.queryservices;
 import com.maquigest.platform.subscriptions.application.queryservices.UserSubscriptionQueryService;
 import com.maquigest.platform.subscriptions.domain.model.aggregates.UserSubscription;
 import com.maquigest.platform.subscriptions.domain.model.queries.GetAllUserSubscriptionsQuery;
+import com.maquigest.platform.subscriptions.domain.model.queries.GetActiveProviderUserIdsQuery;
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionStatus;
 import com.maquigest.platform.subscriptions.domain.repositories.UserSubscriptionRepository;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,18 @@ public class UserSubscriptionQueryServiceImpl implements UserSubscriptionQuerySe
         Instant now = Instant.now();
         return repository.findById(id)
             .map(subscription -> projectEffectiveStatus(subscription, now));
+    }
+
+    /** Preserve the existing marketplace rule without publishing private subscription fields. */
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> handle(GetActiveProviderUserIdsQuery query) {
+        Instant now = Instant.now();
+        return repository.findAll().stream()
+            .filter(subscription -> subscription.isActiveAt(now))
+            .map(UserSubscription::getUserId)
+            .distinct()
+            .toList();
     }
 
     /**

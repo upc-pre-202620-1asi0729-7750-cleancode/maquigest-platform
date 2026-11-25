@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 /**
  * HTTP regression for Phase 1C. Tests real JWT authentication, IAM actor snapshots
@@ -158,6 +159,16 @@ class IamActorHttpAuthorizationIntegrationTests {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/incidents").header("Authorization", bearer(rental)))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void bothCompanyRolesCanReadMarketplaceProviderIdentifiers() throws Exception {
+        for (Account account : new Account[] { rental, construction }) {
+            mockMvc.perform(get("/api/v1/user-subscriptions/active-provider-user-ids")
+                        .header("Authorization", bearer(account)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+        }
     }
 
     private Account signUpAndSignIn(String email, String role) throws Exception {

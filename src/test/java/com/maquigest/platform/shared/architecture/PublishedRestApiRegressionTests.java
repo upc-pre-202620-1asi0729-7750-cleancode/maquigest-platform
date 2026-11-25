@@ -31,6 +31,7 @@ class PublishedRestApiRegressionTests {
             "/api/v1/incidents", "/api/v1/incidents/equipment/{equipmentId}/reactivate",
             "/api/v1/maintenances", "/api/v1/maintenances/{id}/activities",
             "/api/v1/subscription-plans", "/api/v1/user-subscriptions",
+            "/api/v1/user-subscriptions/active-provider-user-ids",
             "/api/v1/user-subscriptions/{id}/cancel"
         }) {
             assertTrue(openApi.contains("\"" + path + "\""), () -> "Missing OpenAPI route: " + path);
@@ -42,7 +43,7 @@ class PublishedRestApiRegressionTests {
             "/api/v1/authentication/me", "/api/v1/equipment", "/api/v1/profiles",
             "/api/v1/rental-requests", "/api/v1/rentals", "/api/v1/incidents",
             "/api/v1/maintenances", "/api/v1/user-subscriptions",
-            "/api/v1/subscription-plans"
+            "/api/v1/subscription-plans", "/api/v1/user-subscriptions/active-provider-user-ids"
         }) {
             mockMvc.perform(get(path)).andExpect(status().isUnauthorized());
         }

@@ -5,6 +5,7 @@ import com.maquigest.platform.subscriptions.application.commandservices.UserSubs
 import com.maquigest.platform.subscriptions.application.queryservices.UserSubscriptionQueryService;
 import com.maquigest.platform.subscriptions.domain.model.commands.*;
 import com.maquigest.platform.subscriptions.domain.model.queries.GetAllUserSubscriptionsQuery;
+import com.maquigest.platform.subscriptions.domain.model.queries.GetActiveProviderUserIdsQuery;
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionStatus;
 import com.maquigest.platform.subscriptions.interfaces.rest.security.SubscriptionOwnershipPolicy;
 import com.maquigest.platform.subscriptions.interfaces.rest.resources.CreateUserSubscriptionResource;
@@ -35,6 +36,11 @@ public class UserSubscriptionController {
     public ResponseEntity<?> getAll() {
         return ResponseEntity.ok(queries.handle(new GetAllUserSubscriptionsQuery()).stream()
             .map(UserSubscriptionResourceFromEntityAssembler::toResourceFromEntity).toList());
+    }
+    @GetMapping("/active-provider-user-ids")
+    @Operation(summary="List active provider identifiers for marketplace access")
+    public ResponseEntity<java.util.List<Long>> getActiveProviderUserIds() {
+        return ResponseEntity.ok(queries.handle(new GetActiveProviderUserIdsQuery()));
     }
     @GetMapping("/{id}") @Operation(summary="Find a subscription by id")
     public ResponseEntity<?> getById(@PathVariable Long id) {
