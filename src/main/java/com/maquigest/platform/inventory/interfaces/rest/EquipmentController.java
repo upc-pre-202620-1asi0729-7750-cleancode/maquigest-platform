@@ -54,6 +54,8 @@ public class EquipmentController {
     @Operation(summary="Get equipment by id")
     @ApiResponse(responseCode="404", description="Equipment does not exist")
     public ResponseEntity<?> getById(@PathVariable Long id) {
+        if (id == null || id <= 0) return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+            ApplicationError.notFound("Equipment", String.valueOf(id)));
         Result<Equipment,ApplicationError> result = queries.handle(new GetEquipmentByIdQuery(id))
             .<Result<Equipment,ApplicationError>>map(Result::success)
             .orElseGet(() -> Result.failure(ApplicationError.notFound("Equipment",String.valueOf(id))));
@@ -137,10 +139,8 @@ public class EquipmentController {
     }
 
     private static ResponseEntity<ProblemDetail> forbidden() {
-        var problem=ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
-            "Only the authenticated rental company that owns the equipment may modify it");
-        problem.setTitle("Forbidden");
-        problem.setProperty("code","EQUIPMENT_FORBIDDEN");
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
+        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                new ApplicationError("EQUIPMENT_FORBIDDEN", "Only the authenticated rental company that owns the equipment may modify it"),
+                "Forbidden");
     }
 }

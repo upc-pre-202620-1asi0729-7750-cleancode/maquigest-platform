@@ -2,15 +2,15 @@ package com.maquigest.platform.maintenance.infrastructure.persistence.jpa.adapte
 import com.maquigest.platform.maintenance.domain.model.aggregates.Incident;
 import com.maquigest.platform.maintenance.domain.model.valueobjects.IncidentStatus;
 import com.maquigest.platform.maintenance.domain.repositories.IncidentRepository;
-import com.maquigest.platform.maintenance.infrastructure.persistence.jpa.repositories.IncidentJpaRepository;
+import com.maquigest.platform.maintenance.infrastructure.persistence.jpa.repositories.IncidentPersistenceRepository;
 import com.maquigest.platform.maintenance.infrastructure.persistence.jpa.assemblers.IncidentPersistenceAssembler;
 import com.maquigest.platform.shared.infrastructure.events.DomainEventPublisher;
 import java.util.*;
 import org.springframework.stereotype.Repository;
 @Repository
 public class IncidentRepositoryImpl implements IncidentRepository {
-    private final IncidentJpaRepository jpa;private final DomainEventPublisher events;
-    public IncidentRepositoryImpl(IncidentJpaRepository jpa,DomainEventPublisher events){this.jpa=jpa;this.events=events;}
+    private final IncidentPersistenceRepository jpa;private final DomainEventPublisher events;
+    public IncidentRepositoryImpl(IncidentPersistenceRepository jpa,DomainEventPublisher events){this.jpa=jpa;this.events=events;}
     public Optional<Incident> findById(Long id){return jpa.findById(id).map(IncidentPersistenceAssembler::toDomain);}
     public Optional<Incident> findByIdForUpdate(Long id){return jpa.findByIdForUpdate(id).map(IncidentPersistenceAssembler::toDomain);}
     public List<Incident> findByOwner(Long owner){return jpa.findByOwnerUserIdOrderByReportedAtDesc(owner).stream().map(IncidentPersistenceAssembler::toDomain).toList();}

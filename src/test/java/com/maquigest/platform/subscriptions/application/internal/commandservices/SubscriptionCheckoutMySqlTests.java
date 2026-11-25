@@ -30,22 +30,26 @@ class SubscriptionCheckoutMySqlTests {
     private Long user(){var email="stripe-"+UUID.randomUUID()+"@example.com";assertTrue(users.handle(new SignUpCommand("Test","Company",email,"TestPassword123!","Test",Roles.ROLE_RENTAL_COMPANY)).isSuccess());return jdbc.queryForObject("select id from users where email=?",Long.class,email);}
     private Long plan(){return jdbc.queryForObject("select id from subscription_plans where name='Essential'",Long.class);}
     private StripeCheckoutPort.Session session(SubscriptionCheckout c,String status,String payment,long amount){return new StripeCheckoutPort.Session("cs_test_"+c.getReference().replace("-",""),c.getReference(),amount,"pen",status,payment,true,"payment","https://checkout.stripe.com/test");}
+    private String failureCode(com.maquigest.platform.shared.application.result.Result<?, com.maquigest.platform.shared.application.result.ApplicationError> result){
+        return assertInstanceOf(com.maquigest.platform.shared.application.result.ApplicationError.class,
+            assertInstanceOf(com.maquigest.platform.shared.application.result.Result.Failure.class,result).error()).code();
+    }
     private long count(Long user){return jdbc.queryForObject("select count(*) from user_subscriptions where user_id=?",Long.class,user);}
     @Test void onlyPaidSessionActivatesAndReplayDoesNotDuplicate(){
         Long user=user(),plan=plan();var command=new CreateSubscriptionCheckoutCommand(user,plan);
         var captured=new java.util.concurrent.atomic.AtomicReference<SubscriptionCheckout>();
         when(stripe.create(any())).thenAnswer(i->{SubscriptionCheckout c=i.getArgument(0);captured.set(c);assertEquals(7900,c.getAmountMinor());return session(c,"open","unpaid",7900);});
-        var pending=checkouts.handle(command);assertEquals(CheckoutStatus.PENDING,pending.status());assertEquals(0,count(user));
+        var pending=checkouts.handle(command).toOptional().orElseThrow();assertEquals(CheckoutStatus.PENDING,pending.status());assertEquals(0,count(user));
         var c=captured.get();var id=session(c,"open","unpaid",7900).id();
         when(stripe.retrieve(id)).thenReturn(session(c,"open","unpaid",7900));
-        assertEquals(pending.reference(),checkouts.handle(command).reference());verify(stripe,times(1)).create(any());
-        assertThrows(CheckoutFailure.class,()->checkouts.handle(new RefreshSubscriptionCheckoutCommand(user(),pending.reference())));
+        assertEquals(pending.reference(),checkouts.handle(command).toOptional().orElseThrow().reference());verify(stripe,times(1)).create(any());
+        assertEquals("CHECKOUT_NOT_FOUND", failureCode(checkouts.handle(new RefreshSubscriptionCheckoutCommand(user(),pending.reference()))));
         when(stripe.retrieve(id)).thenReturn(session(c,"complete","paid",1));
-        assertThrows(CheckoutFailure.class,()->checkouts.handle(new RefreshSubscriptionCheckoutCommand(user,pending.reference())));assertEquals(0,count(user));
+        assertEquals("CHECKOUT_INVALID", failureCode(checkouts.handle(new RefreshSubscriptionCheckoutCommand(user,pending.reference()))));assertEquals(0,count(user));
         when(stripe.retrieve(id)).thenReturn(session(c,"complete","paid",7900));
         when(stripe.verifyWebhook(any(),any())).thenReturn(Optional.of(id));
-        checkouts.handleWebhook(new byte[]{1},"mock");checkouts.handleWebhook(new byte[]{1},"mock");
-        var paid=checkouts.handle(new RefreshSubscriptionCheckoutCommand(user,pending.reference()));assertEquals(CheckoutStatus.PAID,paid.status());assertNotNull(paid.subscriptionId());assertEquals(1,count(user));
+        assertTrue(checkouts.handle(new ProcessSubscriptionWebhookCommand(new byte[]{1},"mock")).isSuccess());assertTrue(checkouts.handle(new ProcessSubscriptionWebhookCommand(new byte[]{1},"mock")).isSuccess());
+        var paid=checkouts.handle(new RefreshSubscriptionCheckoutCommand(user,pending.reference())).toOptional().orElseThrow();assertEquals(CheckoutStatus.PAID,paid.status());assertNotNull(paid.subscriptionId());assertEquals(1,count(user));
         assertEquals(Boolean.FALSE,jdbc.queryForObject("select auto_renew from user_subscriptions where id=?",Boolean.class,paid.subscriptionId()));
     }
     @Test void directActivationBlockedWhenPaymentRequired(){Long user=user();var now=Instant.now();assertTrue(subscriptions.handle(new CreateUserSubscriptionCommand(user,plan(),now,now.plusSeconds(3600),true)).isFailure());assertEquals(0,count(user));}

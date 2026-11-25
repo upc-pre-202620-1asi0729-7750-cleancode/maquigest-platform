@@ -5,8 +5,8 @@ import com.maquigest.platform.rentals.domain.model.valueobjects.RentalPeriod;
 import com.maquigest.platform.rentals.domain.model.valueobjects.RentalRequestStatus;
 import com.maquigest.platform.rentals.domain.repositories.RentalRequestRepository;
 import com.maquigest.platform.rentals.infrastructure.persistence.jpa.assemblers.RentalRequestPersistenceAssembler;
-import com.maquigest.platform.rentals.infrastructure.persistence.jpa.repositories.RentalRequestJpaRepository;
-import com.maquigest.platform.rentals.infrastructure.persistence.jpa.repositories.RentalRequestSubmissionGuardJpaRepository;
+import com.maquigest.platform.rentals.infrastructure.persistence.jpa.repositories.RentalRequestPersistenceRepository;
+import com.maquigest.platform.rentals.infrastructure.persistence.jpa.repositories.RentalRequestSubmissionGuardPersistenceRepository;
 import com.maquigest.platform.shared.infrastructure.events.DomainEventPublisher;
 import java.util.List;
 import java.util.Optional;
@@ -14,12 +14,12 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class RentalRequestRepositoryImpl implements RentalRequestRepository {
-    private final RentalRequestJpaRepository jpa;
-    private final RentalRequestSubmissionGuardJpaRepository submissionGuards;
+    private final RentalRequestPersistenceRepository jpa;
+    private final RentalRequestSubmissionGuardPersistenceRepository submissionGuards;
     private final DomainEventPublisher publisher;
 
-    public RentalRequestRepositoryImpl(RentalRequestJpaRepository jpa,
-                                       RentalRequestSubmissionGuardJpaRepository submissionGuards,
+    public RentalRequestRepositoryImpl(RentalRequestPersistenceRepository jpa,
+                                       RentalRequestSubmissionGuardPersistenceRepository submissionGuards,
                                        DomainEventPublisher publisher) {
         this.jpa = jpa;
         this.submissionGuards = submissionGuards;

@@ -8,6 +8,6 @@ public interface RentalQueryService {
     List<Rental> handle(GetRentalsQuery query);
     Optional<RentalRequest> handle(GetRentalRequestByIdQuery query);
     Optional<Rental> handle(GetRentalByIdQuery query);
-    List<Delivery> deliveriesFor(Long actorUserId);
-    List<EquipmentReturn> returnsFor(Long actorUserId);
+    List<Delivery> handle(GetDeliveriesQuery query);
+    List<EquipmentReturn> handle(GetEquipmentReturnsQuery query);
 }

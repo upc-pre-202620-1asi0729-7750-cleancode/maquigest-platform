@@ -2,6 +2,7 @@ package com.maquigest.platform.subscriptions.domain.model.aggregates;
 
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionStatus;
+import com.maquigest.platform.subscriptions.domain.model.valueobjects.UserId;
 import java.time.Instant;
 import com.maquigest.platform.subscriptions.domain.model.events.*;
 import com.maquigest.platform.subscriptions.domain.model.valueobjects.NotificationType;
@@ -10,7 +11,7 @@ import java.util.Objects;
 /** Subscription aggregate. Only subscription IDs are stored; IAM/Inventory entities are not embedded. */
 public final class UserSubscription extends AbstractDomainAggregateRoot<UserSubscription> {
     private final Long id;
-    private final Long userId;
+    private final UserId userId;
     private Long planId;
     private final com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionPeriod period;
     private SubscriptionStatus status;
@@ -22,7 +23,7 @@ public final class UserSubscription extends AbstractDomainAggregateRoot<UserSubs
         if (userId == null || userId <= 0) throw new IllegalArgumentException("userId must be positive");
         if (planId == null || planId <= 0) throw new IllegalArgumentException("planId must be positive");
         this.id = id;
-        this.userId = userId;
+        this.userId = new UserId(userId);
         this.planId = planId;
         this.period = new com.maquigest.platform.subscriptions.domain.model.valueobjects.SubscriptionPeriod(
             startDate, endDate);
@@ -54,10 +55,10 @@ public final class UserSubscription extends AbstractDomainAggregateRoot<UserSubs
             throw new IllegalStateException("Only an ACTIVE subscription can be cancelled");
         status = SubscriptionStatus.CANCELLED;
         registerDomainEvent(new com.maquigest.platform.subscriptions.domain.model.events.UserSubscriptionCancelledEvent(
-            userId, id, Instant.now()));
+            userId.value(), id, Instant.now()));
     }
     public Long getId() { return id; }
-    public Long getUserId() { return userId; }
+    public Long getUserId() { return userId.value(); }
     public Long getPlanId() { return planId; }
     public Instant getStartDate() { return period.startDate(); }
     public Instant getEndDate() { return period.endDate(); }
@@ -68,8 +69,8 @@ public final class UserSubscription extends AbstractDomainAggregateRoot<UserSubs
         if (persistedId == null || persistedId < 1 || (id != null && !id.equals(persistedId)))
             throw new IllegalArgumentException("Invalid persisted subscription id");
         if (status == SubscriptionStatus.ACTIVE && domainEvents().stream().anyMatch(UserSubscriptionActivatedEvent.class::isInstance))
-            registerDomainEvent(new SubscriptionsNotificationRequestedEvent(persistedId, userId, NotificationType.SUBSCRIPTION_ACTIVATED));
+            registerDomainEvent(new SubscriptionsNotificationRequestedEvent(persistedId, userId.value(), NotificationType.SUBSCRIPTION_ACTIVATED));
         if (domainEvents().stream().anyMatch(UserSubscriptionCancelledEvent.class::isInstance))
-            registerDomainEvent(new SubscriptionsNotificationRequestedEvent(persistedId, userId, NotificationType.SUBSCRIPTION_CANCELLED));
+            registerDomainEvent(new SubscriptionsNotificationRequestedEvent(persistedId, userId.value(), NotificationType.SUBSCRIPTION_CANCELLED));
     }
 }

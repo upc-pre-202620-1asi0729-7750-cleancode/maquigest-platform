@@ -1,4 +1,6 @@
 package com.maquigest.platform.rentals.interfaces.rest;
+import com.maquigest.platform.shared.application.result.ApplicationError;
+
 import com.maquigest.platform.rentals.application.exceptions.RentalsException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -13,10 +15,9 @@ public class RentalsExceptionHandler {
     @ExceptionHandler(RentalsException.class)
     public ResponseEntity<ProblemDetail> handle(RentalsException ex) {
         var status=ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode(ex.code());
-        var problem=ProblemDetail.forStatusAndDetail(status,localize(ex.code(),ex.getMessage()));
-        problem.setTitle(HttpStatus.valueOf(status.value()).getReasonPhrase());
-        problem.setProperty("code",ex.code());
-        return ResponseEntity.status(status).body(problem);
+        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                new ApplicationError(ex.code(), localize(ex.code(), ex.getMessage())),
+                HttpStatus.valueOf(status.value()).getReasonPhrase());
     }
     private static String localize(String code,String fallback) {
         try {return ResourceBundle.getBundle("rentals",LocaleContextHolder.getLocale()).getString(code);}

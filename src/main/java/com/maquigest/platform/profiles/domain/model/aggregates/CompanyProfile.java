@@ -10,16 +10,16 @@ import java.util.Objects;
 /** Company profile aggregate. IAM userId is a reference, not a foreign aggregate. */
 public class CompanyProfile extends AbstractDomainAggregateRoot<CompanyProfile> {
     private Long id;
-    private final Long userId;
+    private final UserId userId;
     private PersonName name;
     private EmailAddress contactEmail;
-    private String phoneNumber;
+    private PhoneNumber phoneNumber;
     private String companyName;
     private CompanyAddress address;
 
     public CompanyProfile(CreateCompanyProfileCommand command) {
         if(command==null)throw new IllegalArgumentException("command is required");
-        this.userId=validId(command.userId(),"userId");
+        this.userId=new UserId(command.userId());
         setFields(command.firstName(),command.lastName(),command.contactEmail(),
             command.phoneNumber(),command.companyName(),command.address());
     }
@@ -32,22 +32,21 @@ public class CompanyProfile extends AbstractDomainAggregateRoot<CompanyProfile> 
     }
     public void onCreated(){
         if(id==null)throw new IllegalStateException("persist profile before publishing its creation");
-        registerDomainEvent(new CompanyProfileCreatedEvent(id,userId));
+        registerDomainEvent(new CompanyProfileCreatedEvent(id,userId.value()));
     }
     public void update(UpdateCompanyProfileCommand command){
         Objects.requireNonNull(command,"command");
-        if(!Objects.equals(id,command.id()) || !userId.equals(command.userId()))
+        if(!Objects.equals(id,command.id()) || !userId.value().equals(command.userId()))
             throw new IllegalArgumentException("profile ownership and identity cannot be changed");
         setFields(command.firstName(),command.lastName(),command.contactEmail(),
             command.phoneNumber(),command.companyName(),command.address());
-        registerDomainEvent(new CompanyProfileUpdatedEvent(id,userId));
+        registerDomainEvent(new CompanyProfileUpdatedEvent(id,userId.value()));
     }
     private void setFields(String firstName,String lastName,String email,String phone,String company,
                            CompanyAddress address){
         this.name=new PersonName(firstName,lastName);
         this.contactEmail=new EmailAddress(email);
-        this.phoneNumber=phone==null?"":phone.trim();
-        if(this.phoneNumber.length()>40)throw new IllegalArgumentException("phoneNumber exceeds 40 characters");
+        this.phoneNumber=new PhoneNumber(phone);
         if(company==null || company.isBlank() || company.trim().length()>180)
             throw new IllegalArgumentException("companyName is required (max 180)");
         this.companyName=company.trim();
@@ -57,11 +56,11 @@ public class CompanyProfile extends AbstractDomainAggregateRoot<CompanyProfile> 
         if(v==null||v<=0)throw new IllegalArgumentException(field+" must be positive");return v;
     }
     public Long getId(){return id;}
-    public Long getUserId(){return userId;}
+    public Long getUserId(){return userId.value();}
     public String getFirstName(){return name.firstName();}
     public String getLastName(){return name.lastName();}
     public String getContactEmail(){return contactEmail.value();}
-    public String getPhoneNumber(){return phoneNumber;}
+    public String getPhoneNumber(){return phoneNumber.value();}
     public String getCompanyName(){return companyName;}
     public CompanyAddress getAddress(){return address;}
 }

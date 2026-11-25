@@ -5,12 +5,18 @@ import com.maquigest.platform.iam.domain.repositories.EmailVerificationRepositor
 import com.maquigest.platform.iam.infrastructure.persistence.jpa.assemblers.EmailVerificationPersistenceAssembler;
 import com.maquigest.platform.iam.infrastructure.persistence.jpa.entities.EmailVerificationPersistenceEntity;
 import com.maquigest.platform.iam.infrastructure.persistence.jpa.repositories.EmailVerificationPersistenceRepository;
+import com.maquigest.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
 @Repository
 public class EmailVerificationRepositoryImpl implements EmailVerificationRepository {
     private final EmailVerificationPersistenceRepository persistence;
-    public EmailVerificationRepositoryImpl(EmailVerificationPersistenceRepository persistence) { this.persistence = persistence; }
+    private final DomainEventPublisher domainEventPublisher;
+    public EmailVerificationRepositoryImpl(EmailVerificationPersistenceRepository persistence,
+            DomainEventPublisher domainEventPublisher) {
+        this.persistence = persistence;
+        this.domainEventPublisher = domainEventPublisher;
+    }
     @Override public Optional<EmailVerification> findByUserIdForUpdate(Long id) {
         return persistence.findByUserIdForUpdate(id).map(EmailVerificationPersistenceAssembler::toDomain);
     }
@@ -20,6 +26,8 @@ public class EmailVerificationRepositoryImpl implements EmailVerificationReposit
     @Override public EmailVerification save(EmailVerification value) {
         var entity = value.getId() == null ? new EmailVerificationPersistenceEntity() : persistence.findById(value.getId()).orElseThrow();
         EmailVerificationPersistenceAssembler.copyToPersistence(value, entity);
-        return EmailVerificationPersistenceAssembler.toDomain(persistence.saveAndFlush(entity));
+        var saved = EmailVerificationPersistenceAssembler.toDomain(persistence.saveAndFlush(entity));
+        domainEventPublisher.publishAndClearEvents(value);
+        return saved;
     }
 }
