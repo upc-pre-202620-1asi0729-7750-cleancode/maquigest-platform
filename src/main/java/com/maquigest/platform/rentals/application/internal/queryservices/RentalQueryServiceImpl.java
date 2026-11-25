@@ -23,8 +23,8 @@ public class RentalQueryServiceImpl implements RentalQueryService {
         .filter(r->r.getConstructionUserId().equals(q.actorUserId())||r.getRentalCompanyUserId().equals(q.actorUserId()));}
     public Optional<Rental> handle(GetRentalByIdQuery q){return rentals.findById(q.id())
         .filter(r->r.getConstructionUserId().equals(q.actorUserId())||r.getRentalCompanyUserId().equals(q.actorUserId()));}
-    public List<Delivery> deliveriesFor(Long actorUserId){return deliveries.findByRentalIds(
-        rentals.findVisibleTo(actorUserId).stream().map(Rental::getId).toList());}
-    public List<EquipmentReturn> returnsFor(Long actorUserId){return returns.findByRentalIds(
-        rentals.findVisibleTo(actorUserId).stream().map(Rental::getId).toList());}
+    @Override public List<Delivery> handle(GetDeliveriesQuery query){return deliveries.findByRentalIds(
+        rentals.findVisibleTo(query.actorUserId()).stream().map(Rental::getId).toList());}
+    @Override public List<EquipmentReturn> handle(GetEquipmentReturnsQuery query){return returns.findByRentalIds(
+        rentals.findVisibleTo(query.actorUserId()).stream().map(Rental::getId).toList());}
 }

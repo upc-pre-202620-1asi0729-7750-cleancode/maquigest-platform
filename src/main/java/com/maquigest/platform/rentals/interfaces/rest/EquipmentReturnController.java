@@ -3,6 +3,7 @@ import com.maquigest.platform.rentals.application.commandservices.RentalLifecycl
 import com.maquigest.platform.rentals.application.queryservices.RentalQueryService;
 import com.maquigest.platform.rentals.application.exceptions.RentalsException;
 import com.maquigest.platform.rentals.domain.model.commands.RegisterReturnCommand;
+import com.maquigest.platform.rentals.domain.model.queries.GetEquipmentReturnsQuery;
 import com.maquigest.platform.rentals.interfaces.rest.security.RentalActorPolicy;
 import com.maquigest.platform.rentals.interfaces.rest.resources.EquipmentReturnResource;
 import com.maquigest.platform.rentals.interfaces.rest.transform.RentalResourceAssembler;
@@ -30,7 +31,7 @@ public class EquipmentReturnController {
         return a.userId();
     }
     @GetMapping @Operation(summary="List equipment returns for visible rentals")
-    public List<EquipmentReturnResource> all(Authentication auth){return queries.returnsFor(actor(auth,false)).stream()
+    public List<EquipmentReturnResource> all(Authentication auth){return queries.handle(new GetEquipmentReturnsQuery(actor(auth,false))).stream()
         .map(RentalResourceAssembler::from).toList();}
     @PostMapping(consumes=APPLICATION_JSON_VALUE) @Operation(summary="Register return, complete rental and release Inventory reservation atomically")
     public ResponseEntity<EquipmentReturnResource> create(@RequestBody EquipmentReturnResource body,Authentication auth) {

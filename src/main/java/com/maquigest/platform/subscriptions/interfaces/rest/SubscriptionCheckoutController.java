@@ -33,7 +33,7 @@ public class SubscriptionCheckoutController {
     }
     @PostMapping(value="/webhook",consumes=MediaType.APPLICATION_JSON_VALUE) @Operation(summary="Receive signed Stripe checkout events")
     public ResponseEntity<Void> webhook(@RequestBody byte[] payload,@RequestHeader(value="Stripe-Signature",required=false) String signature){
-        commands.handleWebhook(payload,signature);return ResponseEntity.noContent().build();
+        commands.handle(new ProcessSubscriptionWebhookCommand(payload,signature));return ResponseEntity.noContent().build();
     }
     @ExceptionHandler(CheckoutFailure.class) public ResponseEntity<ProblemDetail> error(CheckoutFailure e){
         var status=switch(e.code()){case UNAVAILABLE,PROVIDER->HttpStatus.SERVICE_UNAVAILABLE;case FORBIDDEN->HttpStatus.FORBIDDEN;case NOT_FOUND->HttpStatus.NOT_FOUND;case CONFLICT->HttpStatus.CONFLICT;case INVALID->HttpStatus.BAD_REQUEST;};

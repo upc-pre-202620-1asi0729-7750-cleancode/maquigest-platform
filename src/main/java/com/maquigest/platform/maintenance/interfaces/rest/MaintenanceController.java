@@ -55,7 +55,7 @@ public class MaintenanceController {
     }
     @GetMapping("/{id}/activities") @Operation(summary="Read maintenance tracking history")
     public List<MaintenanceActivityResource> activities(@PathVariable Long id,Authentication auth){var actor=policy.requireOwner(auth);
-        return queries.activities(id,actor.userId()).stream().map(MaintenanceResourceAssembler::from).toList();}
+        return queries.handle(new GetMaintenanceActivitiesQuery(id,actor.userId())).stream().map(MaintenanceResourceAssembler::from).toList();}
     @GetMapping("/equipment/{equipmentId}/history") @Operation(summary="Read merged rental, incident and maintenance timeline (owner only)")
     public EquipmentHistoryResource history(@PathVariable Long equipmentId,Authentication auth){var actor=policy.requireOwner(auth);
         return MaintenanceResourceAssembler.from(queries.handle(new GetEquipmentHistoryQuery(equipmentId,actor.userId())));}

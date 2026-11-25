@@ -33,14 +33,6 @@ public class UserSubscriptionQueryServiceImpl implements UserSubscriptionQuerySe
             .toList();
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<UserSubscription> findById(Long id) {
-        Instant now = Instant.now();
-        return repository.findById(id)
-            .map(subscription -> projectEffectiveStatus(subscription, now));
-    }
-
     /** Preserve the existing marketplace rule without publishing private subscription fields. */
     @Override
     @Transactional(readOnly = true)

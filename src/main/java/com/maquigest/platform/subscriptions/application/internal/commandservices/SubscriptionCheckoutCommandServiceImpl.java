@@ -43,9 +43,10 @@ public class SubscriptionCheckoutCommandServiceImpl implements SubscriptionCheck
         if (!c.getReference().equals(session.reference())) throw new CheckoutFailure(INVALID);
         return result(tx.reconcile(c.getUserId(),session),null);
     }
-    public void handleWebhook(byte[] payload,String signature) {
+    @Override
+    public void handle(ProcessSubscriptionWebhookCommand command) {
         enabled();
-        stripe.verifyWebhook(payload,signature).ifPresent(id->{
+        stripe.verifyWebhook(command.payload(),command.signature()).ifPresent(id->{
             var session=stripe.retrieve(id);
             SubscriptionCheckout c;
             try {c=tx.find(session.reference());} catch(CheckoutFailure e) {if(e.code()==NOT_FOUND)return;throw e;}

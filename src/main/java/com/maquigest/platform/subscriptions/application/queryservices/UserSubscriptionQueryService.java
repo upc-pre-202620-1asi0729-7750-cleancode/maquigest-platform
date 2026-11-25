@@ -9,7 +9,6 @@ import java.util.Optional;
 public interface UserSubscriptionQueryService {
     List<UserSubscription> handle(GetAllUserSubscriptionsQuery query);
     List<Long> handle(GetActiveProviderUserIdsQuery query);
-    Optional<UserSubscription> findById(Long id);
     List<UserSubscription> handle(GetUserSubscriptionsByUserIdQuery query);
     Optional<UserSubscription> handle(GetUserSubscriptionByIdAndUserIdQuery query);
 }

@@ -44,7 +44,7 @@ class SubscriptionCheckoutMySqlTests {
         assertThrows(CheckoutFailure.class,()->checkouts.handle(new RefreshSubscriptionCheckoutCommand(user,pending.reference())));assertEquals(0,count(user));
         when(stripe.retrieve(id)).thenReturn(session(c,"complete","paid",7900));
         when(stripe.verifyWebhook(any(),any())).thenReturn(Optional.of(id));
-        checkouts.handleWebhook(new byte[]{1},"mock");checkouts.handleWebhook(new byte[]{1},"mock");
+        checkouts.handle(new ProcessSubscriptionWebhookCommand(new byte[]{1},"mock"));checkouts.handle(new ProcessSubscriptionWebhookCommand(new byte[]{1},"mock"));
         var paid=checkouts.handle(new RefreshSubscriptionCheckoutCommand(user,pending.reference()));assertEquals(CheckoutStatus.PAID,paid.status());assertNotNull(paid.subscriptionId());assertEquals(1,count(user));
         assertEquals(Boolean.FALSE,jdbc.queryForObject("select auto_renew from user_subscriptions where id=?",Boolean.class,paid.subscriptionId()));
     }

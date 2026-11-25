@@ -45,7 +45,7 @@ public class CompanyProfileCommandServiceImpl implements CompanyProfileCommandSe
     }
     /** Idempotent projection from IAM; never writes to an existing company profile. */
     @Override @Transactional
-    public int provisionMissingFromIam(){
+    public int handle(ProvisionMissingCompanyProfilesCommand command){
         int count=0;
         for(var user:directory.allActiveCompanies()){
             if(repository.existsByUserId(user.userId()))continue;

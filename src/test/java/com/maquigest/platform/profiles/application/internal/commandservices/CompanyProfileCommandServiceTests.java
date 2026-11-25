@@ -28,8 +28,8 @@ class CompanyProfileCommandServiceTests {
         when(iam.allActiveCompanies()).thenReturn(List.of(user));
         when(repo.existsByUserId(1L)).thenReturn(false,true);
         when(repo.save(any())).thenAnswer(inv->inv.getArgument(0));
-        assertEquals(1,service.provisionMissingFromIam());
-        assertEquals(0,service.provisionMissingFromIam());
+        assertEquals(1,service.handle(new ProvisionMissingCompanyProfilesCommand()));
+        assertEquals(0,service.handle(new ProvisionMissingCompanyProfilesCommand()));
         verify(repo,times(1)).save(any());
     }
     @Test void preventsChangingUserId(){

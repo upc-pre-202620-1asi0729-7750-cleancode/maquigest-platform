@@ -5,5 +5,5 @@ public interface SubscriptionCheckoutCommandService {
     record CheckoutResult(String reference,CheckoutStatus status,String checkoutUrl,Long subscriptionId) {}
     CheckoutResult handle(CreateSubscriptionCheckoutCommand command);
     CheckoutResult handle(RefreshSubscriptionCheckoutCommand command);
-    void handleWebhook(byte[] payload,String signature);
+    void handle(ProcessSubscriptionWebhookCommand command);
 }

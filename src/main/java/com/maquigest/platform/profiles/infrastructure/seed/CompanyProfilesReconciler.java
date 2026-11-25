@@ -1,5 +1,6 @@
 package com.maquigest.platform.profiles.infrastructure.seed;
 import com.maquigest.platform.profiles.application.commandservices.CompanyProfileCommandService;
+import com.maquigest.platform.profiles.domain.model.commands.ProvisionMissingCompanyProfilesCommand;
 import org.slf4j.Logger;import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -17,7 +18,7 @@ public class CompanyProfilesReconciler {
     public void onReady(){reconcile();}
     @Scheduled(fixedDelayString="${maquigest.profiles.reconcile-interval-ms:60000}",initialDelayString="${maquigest.profiles.reconcile-initial-delay-ms:60000}")
     public void reconcile(){
-        int created=commands.provisionMissingFromIam();
+        int created=commands.handle(new ProvisionMissingCompanyProfilesCommand());
         if(created>0)log.info("Profiles provisioned for {} existing IAM company accounts",created);
     }
 }

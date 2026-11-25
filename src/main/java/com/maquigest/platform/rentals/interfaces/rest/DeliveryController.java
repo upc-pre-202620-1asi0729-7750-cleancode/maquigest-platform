@@ -3,6 +3,7 @@ import com.maquigest.platform.rentals.application.commandservices.RentalLifecycl
 import com.maquigest.platform.rentals.application.queryservices.RentalQueryService;
 import com.maquigest.platform.rentals.application.exceptions.RentalsException;
 import com.maquigest.platform.rentals.domain.model.commands.RegisterDeliveryCommand;
+import com.maquigest.platform.rentals.domain.model.queries.GetDeliveriesQuery;
 import com.maquigest.platform.rentals.interfaces.rest.security.RentalActorPolicy;
 import com.maquigest.platform.rentals.interfaces.rest.resources.DeliveryResource;
 import com.maquigest.platform.rentals.interfaces.rest.transform.RentalResourceAssembler;
@@ -30,7 +31,7 @@ public class DeliveryController {
         return a.userId();
     }
     @GetMapping @Operation(summary="List deliveries for visible rentals")
-    public List<DeliveryResource> all(Authentication auth){return queries.deliveriesFor(actor(auth,false)).stream()
+    public List<DeliveryResource> all(Authentication auth){return queries.handle(new GetDeliveriesQuery(actor(auth,false))).stream()
         .map(RentalResourceAssembler::from).toList();}
     @PostMapping(consumes=APPLICATION_JSON_VALUE) @Operation(summary="Register delivery atomically and activate rental")
     public ResponseEntity<DeliveryResource> create(@RequestBody DeliveryResource body,Authentication auth) {
