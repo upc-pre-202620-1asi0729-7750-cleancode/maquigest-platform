@@ -31,7 +31,7 @@ public class NotificationTransactionalExecutor {
         if (found.isEmpty()) return Result.failure(ApplicationError.notFound("Notification", command.id().toString()));
         var notification = found.get();
         if (notification.isRead()) return Result.success(notification);
-        var now = Instant.now();
+        var now = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         // Allow for a small clock difference between event and read timestamps.
         notification.markAsRead(now.isBefore(notification.getOccurredAt()) ? notification.getOccurredAt() : now);
         return Result.success(repository.save(notification));

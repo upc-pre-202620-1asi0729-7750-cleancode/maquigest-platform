@@ -91,13 +91,17 @@ class NotificationRestMySqlTests {
 
     @Test void markAsReadIsIdempotentAndPreservesEmailStatus() throws Exception {
         var id = create(rental, 131L, NotificationType.RENTAL_REQUEST_CREATED, Instant.now().minusSeconds(30));
-        mockMvc.perform(patch(PATH + "/" + id + "/read").header("Authorization", bearer(rental)))
+        var response = mockMvc.perform(patch(PATH + "/" + id + "/read").header("Authorization", bearer(rental)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.read").value(true))
-                .andExpect(jsonPath("$.emailStatus").value("PENDING"));
+                .andExpect(jsonPath("$.emailStatus").value("PENDING")).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        String responseReadAt = com.jayway.jsonpath.JsonPath.read(response, "$.readAt");
         var firstRead = repository.findById(id).orElseThrow().getReadAt();
         assertNotNull(firstRead);
+        assertEquals(firstRead, Instant.parse(responseReadAt));
         mockMvc.perform(patch(PATH + "/" + id + "/read").header("Authorization", bearer(rental)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk()).andExpect(jsonPath("$.readAt").value(responseReadAt));
+        mockMvc.perform(get(PATH + "/" + id).header("Authorization", bearer(rental)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.readAt").value(responseReadAt));
         var saved = repository.findById(id).orElseThrow();
         assertEquals(firstRead, saved.getReadAt());
         assertEquals(NotificationEmailStatus.PENDING, saved.getEmailStatus());

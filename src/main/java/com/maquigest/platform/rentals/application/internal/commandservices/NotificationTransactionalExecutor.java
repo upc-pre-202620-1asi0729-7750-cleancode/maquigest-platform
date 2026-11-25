@@ -30,7 +30,7 @@ public class NotificationTransactionalExecutor {
         var notification = repository.findByIdAndRecipientIdForUpdate(command.id(), command.recipientId())
                 .orElseThrow(() -> RentalsException.notFound("Notification"));
         if (notification.isRead()) return notification;
-        var now = Instant.now();
+        var now = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         // Allow for a small clock difference between event and read timestamps.
         notification.markAsRead(now.isBefore(notification.getOccurredAt()) ? notification.getOccurredAt() : now);
         return repository.save(notification);
