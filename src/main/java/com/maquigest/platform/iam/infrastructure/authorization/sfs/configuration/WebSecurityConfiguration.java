@@ -86,7 +86,9 @@ public class WebSecurityConfiguration {
                                 "/api/v1/authentication/sign-up",
                                 "/api/v1/authentication/sign-in",
                                 "/api/v1/authentication/password-recovery",
-                                "/api/v1/authentication/reset-password").permitAll()
+                                "/api/v1/authentication/reset-password",
+                                "/api/v1/authentication/verify-email",
+                                "/api/v1/authentication/resend-email-verification").permitAll()
                         .requestMatchers(
                                 "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html",
                                 "/swagger-ui/**", "/swagger-resources/**", "/webjars/**",
