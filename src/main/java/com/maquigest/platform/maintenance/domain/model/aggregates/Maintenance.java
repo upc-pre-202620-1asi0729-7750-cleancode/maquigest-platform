@@ -8,10 +8,10 @@ public final class Maintenance extends AbstractDomainAggregateRoot<Maintenance> 
     private final Long id;
     private final EquipmentId equipmentId;
     private final OwnerUserId ownerUserId;
-    private final String type;
+    private final MaintenanceType type;
     private final Instant performedAt;
     private MaintenanceStatus status;
-    private String technician;
+    private TechnicianName technician;
     private Instant acknowledgedAt;
     public Maintenance(Long id,Long equipmentId,Long ownerUserId,Instant performedAt,String type,
                        MaintenanceStatus status,String technician,Instant acknowledgedAt) {
@@ -19,10 +19,9 @@ public final class Maintenance extends AbstractDomainAggregateRoot<Maintenance> 
         if(equipmentId==null||equipmentId<=0||ownerUserId==null||ownerUserId<=0)throw new IllegalArgumentException("Invalid equipment or owner");
         this.id=id;this.equipmentId=new EquipmentId(equipmentId);this.ownerUserId=new OwnerUserId(ownerUserId);
         this.performedAt=Objects.requireNonNull(performedAt,"performedAt");
-        this.type=new MaintenanceType(type).value();this.status=Objects.requireNonNull(status,"status");
-        this.technician=technician==null?"":technician.trim();this.acknowledgedAt=acknowledgedAt;
-        if(this.technician.length()>180)throw new IllegalArgumentException("Technician name is too long");
-        if(acknowledgedAt!=null&&this.technician.isBlank())throw new IllegalArgumentException("Acknowledgement requires a technician");
+        this.type=new MaintenanceType(type);this.status=Objects.requireNonNull(status,"status");
+        this.technician=new TechnicianName(technician);this.acknowledgedAt=acknowledgedAt;
+        if(acknowledgedAt!=null&&this.technician.value().isBlank())throw new IllegalArgumentException("Acknowledgement requires a technician");
     }
     public static Maintenance register(Long equipmentId,Long ownerUserId,Instant when,String type,MaintenanceStatus status) {
         if(status!=MaintenanceStatus.SCHEDULED&&status!=MaintenanceStatus.COMPLETED)
@@ -51,23 +50,23 @@ public final class Maintenance extends AbstractDomainAggregateRoot<Maintenance> 
                 "Scheduled maintenance cannot advance before its scheduled date");
         if(assigned!=null&&!assigned.isBlank()){
             if(assigned.trim().length()>180)throw new IllegalArgumentException("Technician name too long");
-            technician=assigned.trim();
+            technician=new TechnicianName(assigned);
         }
         status=target;registerDomainEvent(new MaintenanceStatusChangedEvent(id,equipmentId.value(),status.name()));
     }
     public void assign(String name){
         if(name==null||name.isBlank()||name.trim().length()>180)throw new IllegalArgumentException("Invalid technician");
-        technician=name.trim();
+        technician=new TechnicianName(name);
     }
     public void acknowledge(Instant at){
-        if(technician.isBlank())throw new IllegalStateException("Assign a technician first");
+        if(technician.value().isBlank())throw new IllegalStateException("Assign a technician first");
         if(acknowledgedAt!=null)throw new IllegalStateException("Already acknowledged");
         acknowledgedAt=Objects.requireNonNull(at);
     }
     public Long getId(){return id;} public Long getEquipmentId(){return equipmentId.value();}
     public Long getOwnerUserId(){return ownerUserId.value();} public Instant getPerformedAt(){return performedAt;}
-    public String getType(){return type;} public MaintenanceStatus getStatus(){return status;}
-    public String getTechnician(){return technician;} public Instant getAcknowledgedAt(){return acknowledgedAt;}
+    public String getType(){return type.value();} public MaintenanceStatus getStatus(){return status;}
+    public String getTechnician(){return technician.value();} public Instant getAcknowledgedAt(){return acknowledgedAt;}
     /** Register a local notification fact after persistence assigns the identity. */
     public void onNotificationPersisted(Long persistedId) {
         if (persistedId == null || persistedId < 1 || (id != null && !id.equals(persistedId)))

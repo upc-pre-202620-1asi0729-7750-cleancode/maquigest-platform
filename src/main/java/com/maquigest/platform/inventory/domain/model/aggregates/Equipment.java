@@ -4,6 +4,7 @@ import com.maquigest.platform.inventory.domain.model.commands.CreateEquipmentCom
 import com.maquigest.platform.inventory.domain.model.commands.UpdateEquipmentCommand;
 import com.maquigest.platform.inventory.domain.model.entities.AvailabilityBlock;
 import com.maquigest.platform.inventory.domain.model.valueobjects.EquipmentStatus;
+import com.maquigest.platform.inventory.domain.model.valueobjects.EquipmentCode;
 import com.maquigest.platform.inventory.domain.model.valueobjects.RentalRate;
 import com.maquigest.platform.inventory.domain.model.valueobjects.UserId;
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
@@ -18,7 +19,7 @@ import java.util.List;
 public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
     private Long id;
     private final UserId userId;
-    private String code;
+    private EquipmentCode code;
     private String name;
     private String description;
     private Long categoryId;
@@ -62,7 +63,7 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
     }
     private void updateFields(String code, String name, String description, Long categoryId,
         String location, RentalRate rentalRate) {
-        this.code = required(code, "code", 60);
+        this.code = new EquipmentCode(code);
         this.name = required(name, "name", 180);
         this.description = required(description, "description", 3000);
         this.categoryId = positive(categoryId, "categoryId");
@@ -135,7 +136,7 @@ public final class Equipment extends AbstractDomainAggregateRoot<Equipment> {
     }
     public Long getId() { return id; }
     public Long getUserId() { return userId.value(); }
-    public String getCode() { return code; }
+    public String getCode() { return code.value(); }
     public String getName() { return name; }
     public String getDescription() { return description; }
     public Long getCategoryId() { return categoryId; }

@@ -2,6 +2,7 @@ package com.maquigest.platform.iam.domain.model.aggregates;
 
 import com.maquigest.platform.iam.domain.model.entities.Role;
 import com.maquigest.platform.iam.domain.model.valueobjects.UserStatus;
+import com.maquigest.platform.iam.domain.model.valueobjects.EmailAddress;
 import com.maquigest.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
 import com.maquigest.platform.iam.domain.model.events.IamNotificationRequestedEvent;
@@ -16,7 +17,7 @@ public class User extends AbstractDomainAggregateRoot<User> {
     private Long id;
     private String firstName;
     private String lastName;
-    private String email;
+    private EmailAddress email;
     private String password;
     private String companyName;
     private Set<Role> roles;
@@ -26,10 +27,7 @@ public class User extends AbstractDomainAggregateRoot<User> {
                 String companyName, Role role) {
         this.firstName = requireNonBlank(firstName, "firstName");
         this.lastName = requireNonBlank(lastName, "lastName");
-        this.email = requireNonBlank(email, "email").toLowerCase(java.util.Locale.ROOT);
-        if (!this.email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
-            throw new IllegalArgumentException("email must be valid");
-        }
+        this.email = new EmailAddress(email);
         this.password = requireNonBlank(password, "password");
         this.companyName = requireNonBlank(companyName, "companyName");
         if (role == null || role.getName() == null) {
@@ -74,6 +72,8 @@ public class User extends AbstractDomainAggregateRoot<User> {
         if (status != UserStatus.PENDING_EMAIL_VERIFICATION) throw new IllegalStateException("Account is not pending verification");
         status = UserStatus.ACTIVE;
     }
+
+    public String getEmail() { return email.value(); }
 
     /** Read-only snapshot; roles can only be added through the aggregate. */
     public Set<Role> getRoles() {

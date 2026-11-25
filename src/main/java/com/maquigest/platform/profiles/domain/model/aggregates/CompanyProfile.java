@@ -13,7 +13,7 @@ public class CompanyProfile extends AbstractDomainAggregateRoot<CompanyProfile> 
     private final UserId userId;
     private PersonName name;
     private EmailAddress contactEmail;
-    private String phoneNumber;
+    private PhoneNumber phoneNumber;
     private String companyName;
     private CompanyAddress address;
 
@@ -46,8 +46,7 @@ public class CompanyProfile extends AbstractDomainAggregateRoot<CompanyProfile> 
                            CompanyAddress address){
         this.name=new PersonName(firstName,lastName);
         this.contactEmail=new EmailAddress(email);
-        this.phoneNumber=phone==null?"":phone.trim();
-        if(this.phoneNumber.length()>40)throw new IllegalArgumentException("phoneNumber exceeds 40 characters");
+        this.phoneNumber=new PhoneNumber(phone);
         if(company==null || company.isBlank() || company.trim().length()>180)
             throw new IllegalArgumentException("companyName is required (max 180)");
         this.companyName=company.trim();
@@ -61,7 +60,7 @@ public class CompanyProfile extends AbstractDomainAggregateRoot<CompanyProfile> 
     public String getFirstName(){return name.firstName();}
     public String getLastName(){return name.lastName();}
     public String getContactEmail(){return contactEmail.value();}
-    public String getPhoneNumber(){return phoneNumber;}
+    public String getPhoneNumber(){return phoneNumber.value();}
     public String getCompanyName(){return companyName;}
     public CompanyAddress getAddress(){return address;}
 }
