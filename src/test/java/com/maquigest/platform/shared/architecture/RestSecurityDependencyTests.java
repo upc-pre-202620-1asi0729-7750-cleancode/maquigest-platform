@@ -4,7 +4,7 @@ import com.maquigest.platform.iam.interfaces.acl.IamActorFacade;
 import com.maquigest.platform.inventory.interfaces.rest.EquipmentController;
 import com.maquigest.platform.maintenance.interfaces.rest.IncidentsController;
 import com.maquigest.platform.maintenance.interfaces.rest.MaintenancesController;
-import com.maquigest.platform.profiles.interfaces.rest.ProfilesController;
+import com.maquigest.platform.profiles.interfaces.rest.CompanyProfilesController;
 import com.maquigest.platform.rentals.interfaces.rest.DeliveriesController;
 import com.maquigest.platform.rentals.interfaces.rest.EquipmentReturnsController;
 import com.maquigest.platform.rentals.interfaces.rest.RentalsController;
@@ -29,7 +29,7 @@ class RestSecurityDependencyTests {
         EquipmentController.class,
         IncidentsController.class,
         MaintenancesController.class,
-        ProfilesController.class,
+        CompanyProfilesController.class,
         DeliveriesController.class,
         EquipmentReturnsController.class,
         RentalsController.class,

@@ -6,7 +6,7 @@ import com.maquigest.platform.inventory.interfaces.rest.EquipmentController;
 import com.maquigest.platform.inventory.interfaces.rest.security.InventoryOwnershipPolicy;
 import com.maquigest.platform.profiles.application.commandservices.CompanyProfileCommandService;
 import com.maquigest.platform.profiles.application.queryservices.CompanyProfileQueryService;
-import com.maquigest.platform.profiles.interfaces.rest.ProfilesController;
+import com.maquigest.platform.profiles.interfaces.rest.CompanyProfilesController;
 import com.maquigest.platform.profiles.interfaces.rest.resources.UpdateCompanyProfileResource;
 import com.maquigest.platform.profiles.interfaces.rest.security.ProfileOwnershipPolicy;
 import com.maquigest.platform.subscriptions.application.commandservices.UserSubscriptionCommandService;
@@ -104,7 +104,7 @@ class ProblemDetailConsistencyTests {
 
     @Test void legacyForbiddenContractsKeepDefaultTypeAndNoDetailsExtension() {
         var equipment = new EquipmentController(mock(EquipmentCommandService.class), mock(EquipmentQueryService.class), mock(InventoryOwnershipPolicy.class));
-        var profiles = new ProfilesController(mock(CompanyProfileCommandService.class), mock(CompanyProfileQueryService.class), mock(ProfileOwnershipPolicy.class));
+        var profiles = new CompanyProfilesController(mock(CompanyProfileCommandService.class), mock(CompanyProfileQueryService.class), mock(ProfileOwnershipPolicy.class));
         var subscriptions = new UserSubscriptionsController(mock(UserSubscriptionQueryService.class), mock(UserSubscriptionCommandService.class), mock(SubscriptionOwnershipPolicy.class));
         var resource = new UpdateCompanyProfileResource(1L, 2L, "QA", "Company", "qa@example.com", "", "QA Company", null);
         var auth = mock(org.springframework.security.core.Authentication.class);
